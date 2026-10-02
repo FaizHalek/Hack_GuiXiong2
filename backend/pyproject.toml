@@ -1,0 +1,15 @@
+[project]
+name = "research-assistant-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 130
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008"]  # FastAPI Depends() in defaults
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
