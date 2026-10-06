@@ -4,6 +4,7 @@ from dataclasses import asdict
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
 
 from app.config import get_settings
@@ -237,18 +238,56 @@ def set_user_labels(user_id: str, body: LabelAssignment, admin: CurrentUser = De
 
 @router.get("/query-logs")
 def query_logs(limit: int = 100, verdict: str | None = None, admin: CurrentUser = Depends(require_admin)):
-    q = (
-        admin.db.table("query_logs")
-        .select(
-            "id,question,verdict,grounded_score,regenerated,latency_ms,input_tokens,output_tokens,created_at,"
-            "profiles(email),messages(content,feedback,feedback_note,citations)"
-        )
-        .order("created_at", desc=True)
-        .limit(min(limit, 500))
+    base = (
+        "id,question,verdict,grounded_score,regenerated,latency_ms,input_tokens,output_tokens,created_at,"
+        "label_ids,plan,retrieved_chunk_ids,profiles(email),messages(content,feedback,feedback_note,citations,eval)"
     )
-    if verdict:
-        q = q.eq("verdict", verdict)
-    return q.execute().data
+
+    def fetch(fields: str) -> list[dict]:
+        q = admin.db.table("query_logs").select(fields).order("created_at", desc=True).limit(min(limit, 500))
+        if verdict:
+            q = q.eq("verdict", verdict)
+        return q.execute().data
+
+    try:
+        logs = fetch(base + ",retrieved,first_draft")
+    except APIError:
+        # Database without migration 0004: show what the older columns hold.
+        logs = [{**log, "retrieved": [], "first_draft": None} for log in fetch(base)]
+    _backfill_retrieved(admin, logs)
+    return logs
+
+
+def _backfill_retrieved(admin: CurrentUser, logs: list[dict]) -> None:
+    """Questions logged before retrieval traces were stored only kept chunk ids; rebuild what we can."""
+    missing = [log for log in logs if not log.get("retrieved") and log.get("retrieved_chunk_ids")]
+    ids = sorted({cid for log in missing for cid in log["retrieved_chunk_ids"]})
+    if not ids:
+        return
+    rows = (
+        admin.db.table("chunks")
+        .select("id,document_id,page_index,content,documents(title),pages(printed_label)")
+        .in_("id", ids)
+        .execute()
+        .data
+    )
+    by_id = {r["id"]: r for r in rows}
+    for log in missing:
+        cited = {c["id"] for c in (log.get("messages") or {}).get("citations") or []}
+        log["retrieved"] = [
+            {
+                "id": f"S{i}",
+                "document_id": r["document_id"],
+                "document_title": (r.get("documents") or {}).get("title", ""),
+                "page_index": r["page_index"],
+                "printed_label": (r.get("pages") or {}).get("printed_label"),
+                "score": None,
+                "matched": r["content"][:600],
+                "cited": f"S{i}" in cited,
+            }
+            for i, cid in enumerate(log["retrieved_chunk_ids"], start=1)
+            if (r := by_id.get(cid))
+        ]
 
 
 @router.get("/stats")

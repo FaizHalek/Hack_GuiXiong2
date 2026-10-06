@@ -15,7 +15,6 @@ class Settings(BaseSettings):
 
     deepseek_api_key: str = ""
     deepseek_base_url: str = "https://api.deepseek.com"
-    voyage_api_key: str = ""
 
     frontend_origin: str = "http://localhost:5173"
     storage_bucket: str = "research-pdfs"
@@ -30,20 +29,25 @@ class Settings(BaseSettings):
     query_effort: str = ""
     answer_effort: str = "low"
     evaluator_effort: str = "low"
-    embedding_model: str = "voyage-3.5"
-    embedding_dim: int = 1024
+
+    # Embeddings: Supabase Edge Function running the built-in gte-small model
+    embed_function: str = "embed"
+    embed_secret: str = ""  # must match the function's EMBED_SECRET
+    embedding_dim: int = 384
 
     # Ingestion
     ingest_batch_pages: int = 25
-    embed_batch_size: int = 64
-    max_chunk_chars: int = 6000  # ~1,500 tokens
-    chunk_overlap_chars: int = 600
+    embed_batch_size: int = 8  # texts per Edge Function call (2 s CPU budget per call)
+    embed_concurrency: int = 4
+    # gte-small reads at most 512 tokens, so pages are embedded in ~1,800-char pieces.
+    # Retrieval still hands the full page to the model, and citations stay per page.
+    max_chunk_chars: int = 1800
+    chunk_overlap_chars: int = 200
 
     # Retrieval
-    match_count: int = 12
-    context_chunks: int = 10
-    max_chunks_per_page: int = 2
-    max_chunks_per_document: int = 4
+    match_count: int = 24  # chunks per sub-query; several chunks can share a page
+    context_pages: int = 8  # full pages passed to the Answer Agent
+    max_pages_per_document: int = 4
 
     # Evaluation gate
     min_grounded_score: float = 0.75

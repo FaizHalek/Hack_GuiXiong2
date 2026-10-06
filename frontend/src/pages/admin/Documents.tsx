@@ -146,7 +146,7 @@ export function Documents() {
         </div>
         <div className="flex items-center gap-2 text-sm">
           <span className="text-slate-500">Add to libraries:</span>
-          <LabelToggles labels={labelList} selected={uploadLabels} onChange={setUploadLabels} />
+          <LabelToggles labels={labelList} status={labels.status} selected={uploadLabels} onChange={setUploadLabels} />
         </div>
         {jobs.length > 0 && (
           <ul className="space-y-1.5">
@@ -210,7 +210,7 @@ export function Documents() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <LabelToggles labels={labelList} selected={d.label_ids} onChange={(ids) => setDocLabels(d, ids)} />
+                    <LabelToggles labels={labelList} status={labels.status} selected={d.label_ids} onChange={(ids) => setDocLabels(d, ids)} />
                     {d.label_ids.length === 0 && (
                       <p className="mt-1 text-xs text-amber-700">Not in any library: no user can search it.</p>
                     )}

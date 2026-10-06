@@ -86,7 +86,7 @@ export function Users() {
           {role === 'user' && (
             <div className="flex items-center gap-2 text-sm">
               <span className="text-slate-500">Can search:</span>
-              <LabelToggles labels={labelList} selected={inviteLabels} onChange={setInviteLabels} />
+              <LabelToggles labels={labelList} status={labels.status} selected={inviteLabels} onChange={setInviteLabels} />
             </div>
           )}
           {notice && <p className="text-sm text-green-700">{notice}</p>}
@@ -128,7 +128,7 @@ export function Users() {
                     {u.role === 'admin' ? (
                       <span className="text-xs text-slate-500">All libraries</span>
                     ) : (
-                      <LabelToggles labels={labelList} selected={u.label_ids} onChange={(ids) => changeLabels(u, ids)} />
+                      <LabelToggles labels={labelList} status={labels.status} selected={u.label_ids} onChange={(ids) => changeLabels(u, ids)} />
                     )}
                   </td>
                 </tr>

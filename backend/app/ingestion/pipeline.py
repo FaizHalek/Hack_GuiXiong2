@@ -9,7 +9,7 @@ from app.config import get_settings
 from app.db import service_client
 from app.ingestion.chunk import embedding_text, split_page
 from app.ingestion.extract import detect_boilerplate, extract_pages, open_pdf
-from app.llm import voyage
+from app.llm import embeddings
 
 
 @dataclass
@@ -79,10 +79,7 @@ def ingest_batch(document_id: str, start: int) -> BatchResult:
                     }
                 )
 
-        vectors = voyage.embed(
-            [embedding_text(doc["title"], r["page_index"], r["content"]) for r in chunk_rows],
-            input_type="document",
-        )
+        vectors = embeddings.embed([embedding_text(doc["title"], r["page_index"], r["content"]) for r in chunk_rows])
         for row, vec in zip(chunk_rows, vectors, strict=True):
             row["embedding"] = vec
         if chunk_rows:

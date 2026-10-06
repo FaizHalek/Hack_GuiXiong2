@@ -8,7 +8,7 @@ This prototype lets an authorised user ask questions across a selected company's
 Admin uploads PDFs ──► Supabase Storage (private bucket, signed upload URL)
         │
         ▼
-Batched ingestion (FastAPI): pypdf page-by-page ─► clean text ─► one chunk per page ─► Voyage embeddings ─► Postgres
+Batched ingestion (FastAPI): pypdf page-by-page ─► clean text ─► ~1,800-char chunks per page ─► gte-small embeddings (Supabase Edge Function) ─► Postgres
         │
 User picks libraries and asks a question
         │
@@ -37,9 +37,9 @@ Answer with citation chips ─► click ─► PDF viewer opens the cited page a
 - **Batched processing**: FastAPI processes 25 pages per request and the admin UI keeps calling until the document is finished. Each request stays inside Vercel's time limit, and a failed document can resume where it stopped.
 - **Page numbering**: each page is stored with its **physical position in the file** (`page_index`), which is what every reference uses. The number printed on the page is often a roman numeral or restarts in each section, so it is kept only for display.
 - **Text cleanup**: page headers and footers that repeat on more than half the pages are removed, and words split by a hyphen at a line break are joined back together.
-- **Chunking**: each page becomes one chunk, so every citation resolves to exactly one page. Very long pages are split into overlapping sub-chunks that keep the same page number.
+- **Chunking**: the embedding model reads at most 512 tokens, so each page is split into overlapping pieces of about 1,800 characters. Every piece keeps its page number. Search matches on the pieces, then rolls the hits up to pages: a page scores its best piece for each sub-query. The Answer Agent receives the **whole page**, so it isn't working from fragments, and every citation still resolves to exactly one page.
 - **Scanned pages**: pages with no extractable text are flagged in the admin panel as possibly scanned.
-- **Search**: `match_chunks` combines two searches: pgvector (HNSW, cosine similarity on 1024-dimension Voyage embeddings) and Postgres full-text search. It merges their rankings with Reciprocal Rank Fusion and only returns documents that have finished indexing.
+- **Search**: `match_chunks` combines two searches: pgvector (HNSW, cosine similarity on 384-dimension `gte-small` embeddings) and Postgres full-text search. It merges their rankings with Reciprocal Rank Fusion and only returns documents that have finished indexing.
 
 ### Answers grounded in the sources
 - The **Answer Agent** (DeepSeek `deepseek-v4-pro`, low thinking effort) sees only the retrieved excerpts, and each excerpt is tagged with its id, report title and page.
@@ -67,9 +67,9 @@ Answer with citation chips ─► click ─► PDF viewer opens the cited page a
 | Layer | Choice | Why |
 |---|---|---|
 | Frontend | React + Vite + Tailwind, react-pdf, TanStack Query | Fast to build; react-pdf gives a text layer for highlighting |
-| API | FastAPI on Vercel (Python) | pypdf and the OpenAI/Voyage SDKs are Python; streams answers over SSE |
+| API | FastAPI on Vercel (Python) | pypdf and the OpenAI SDK are Python; streams answers over SSE |
 | LLMs | DeepSeek API: `deepseek-v4-pro` (answers), `deepseek-flash` (query planning, evaluator) | OpenAI-compatible and low cost; Flash keeps planning and the per-answer check fast and cheap. Models and thinking effort are set per agent in env vars |
-| Embeddings | Voyage `voyage-3.5` (1024-dim) | DeepSeek has no embeddings API; Voyage has strong retrieval quality and separate query/document modes |
+| Embeddings | Supabase built-in `gte-small` (384-dim) via an Edge Function | DeepSeek has no embeddings API. This needs no extra vendor or key. It's English-only and smaller than commercial models; keyword search in the hybrid ranking helps make up for that, and the model can be swapped in `backend/app/llm/embeddings.py` |
 | Data | Supabase Postgres + pgvector + full-text search, Auth, Storage | One managed service for vectors, keyword search, auth, files and row-level security |
 
 DeepSeek's JSON mode guarantees valid JSON but not a particular shape, so the Query and Evaluator agents put the expected schema in the prompt, validate the reply with pydantic, and retry once with the validation error if it doesn't fit.

@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Research Intelligence Assistant: Concept Proposal</title>
+<style>
+  @page { size: A4; margin: 18mm 17mm 20mm; }
+  :root {
+    --ink: #0f172a; --muted: #475569; --faint: #94a3b8; --line: #e2e8f0;
+    --brand: #4f46e5; --brand-soft: #eef2ff; --ok: #15803d; --ok-soft: #f0fdf4;
+    --warn: #b45309; --warn-soft: #fffbeb;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; color: var(--ink); font-size: 10.2pt; line-height: 1.5; margin: 0; }
+  h1, h2, h3 { line-height: 1.2; margin: 0; }
+  h2 { font-size: 16pt; margin: 0 0 8px; color: var(--ink); }
+  h2 .num { color: var(--brand); margin-right: 6px; }
+  h3 { font-size: 11.5pt; margin: 14px 0 4px; }
+  p { margin: 0 0 8px; }
+  ul, ol { margin: 0 0 8px; padding-left: 18px; }
+  li { margin: 2px 0; }
+  code { font-family: Consolas, monospace; font-size: 9pt; background: #f1f5f9; padding: 0 3px; border-radius: 3px; }
+  .section { break-before: page; }
+  .keep { break-inside: avoid; }
+  .lead { font-size: 11pt; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 9.4pt; }
+  th { text-align: left; background: #f8fafc; color: var(--muted); font-weight: 600; font-size: 8.6pt; text-transform: uppercase; letter-spacing: .03em; }
+  th, td { border-bottom: 1px solid var(--line); padding: 6px 8px; vertical-align: top; }
+  tr { break-inside: avoid; }
+  figure { margin: 10px 0 12px; break-inside: avoid; }
+  figure img { width: 100%; border: 1px solid var(--line); border-radius: 6px; display: block; }
+  figcaption { font-size: 8.8pt; color: var(--muted); margin-top: 5px; }
+  .callout { border-left: 3px solid var(--brand); background: var(--brand-soft); padding: 8px 12px; border-radius: 0 6px 6px 0; margin: 8px 0 12px; }
+  .callout.ok { border-color: var(--ok); background: var(--ok-soft); }
+  .callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stat { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .stat b { display: block; font-size: 17pt; color: var(--brand); line-height: 1.1; }
+  .stat span { font-size: 8.8pt; color: var(--muted); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0 12px; }
+  .pill { display: inline-block; font-size: 8.4pt; padding: 1px 7px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); font-weight: 600; }
+  .pill.todo { background: #f1f5f9; color: var(--muted); }
+  .small { font-size: 8.8pt; color: var(--muted); }
+  .compact table { font-size: 8.9pt; margin: 4px 0 8px; }
+  .compact th, .compact td { padding: 4px 8px; }
+  .compact h3 { margin-top: 10px; }
+
+  /* Cover */
+  .cover { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .cover .eyebrow { color: var(--brand); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 9pt; }
+  .cover h1 { font-size: 30pt; margin: 14px 0 10px; letter-spacing: -.01em; }
+  .cover .sub { font-size: 13pt; color: var(--muted); max-width: 150mm; }
+  .cover .badge { display: inline-block; margin-top: 18px; background: var(--ok-soft); color: var(--ok); border: 1px solid #bbf7d0; padding: 5px 12px; border-radius: 999px; font-weight: 600; font-size: 10pt; }
+  .cover img { width: 100%; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(15,23,42,.08); }
+  .cover .meta { font-size: 9.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; display: flex; justify-content: space-between; }
+
+  .toc { columns: 2; column-gap: 24px; padding-left: 0; list-style: none; }
+  .toc li { padding: 3px 0; border-bottom: 1px dotted var(--line); }
+  .toc .n { color: var(--brand); font-weight: 600; display: inline-block; width: 22px; }
+
+  svg text { font-family: "Segoe UI", Arial, sans-serif; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<section class="cover">
+  <div>
+    <div class="eyebrow">Concept proposal</div>
+    <h1>AI Research Intelligence Assistant</h1>
+    <p class="sub">Ask questions across a company's research library and get answers grounded in the reports, with citations to the exact page.</p>
+    <span class="badge">✓ Working prototype built and running</span>
+  </div>
+  <img src="screenshots/02-answer-with-pdf.png" alt="The prototype answering a question, with the cited PDF page open and the evidence highlighted">
+  <div class="meta"><span>Solution, architecture, evaluation and engagement plan</span><span>3 October 2026</span></div>
+</section>
+
+<!-- ============ CONTENTS + EXEC SUMMARY ============ -->
+<section class="section">
+  <h2>Contents</h2>
+  <ul class="toc">
+    <li><span class="n">1</span>Executive summary</li>
+    <li><span class="n">2</span>The problem</li>
+    <li><span class="n">3</span>The solution: what users do</li>
+    <li><span class="n">4</span>How the proposal meets the brief</li>
+    <li><span class="n">5</span>Architecture and technology stack</li>
+    <li><span class="n">6</span>Ingestion, indexing and retrieval</li>
+    <li><span class="n">7</span>Grounded answers: the multi-agent pipeline</li>
+    <li><span class="n">8</span>Citations and verification</li>
+    <li><span class="n">9</span>Access control</li>
+    <li><span class="n">10</span>Administration</li>
+    <li><span class="n">11</span>Evaluating answer quality</li>
+    <li><span class="n">12</span>Prototype status and evidence</li>
+    <li><span class="n">13</span>Proving customer value: 10-week engagement</li>
+    <li><span class="n">14</span>Risks, limits and the path to production</li>
+  </ul>
+
+  <h2 style="margin-top:22px"><span class="num">1</span>Executive summary</h2>
+  <p>The company's historical research holds a lot of value, but it is locked inside individual PDF reports. Customers have to open reports one by one to find information and connect it across years. This proposal puts forward an <b>AI research assistant</b>. An authorised user picks the research libraries they want, asks a question in plain language, and gets an answer built only from those reports. Every statement cites the report and page it came from.</p>
+  <p>The concept is <b>already built as a working prototype</b>, not just a design. Today it:</p>
+  <ul>
+    <li>ingests real PDF reports page by page, with an exact page index for every page</li>
+    <li>finds relevant pages with hybrid search, combining meaning-based and keyword search</li>
+    <li>writes answers with a three-agent pipeline: a Query Agent plans the search, an Answer Agent writes the cited answer, and an Evaluator Agent checks every claim against its source</li>
+    <li>opens any citation in a built-in PDF viewer, at the cited page with the evidence highlighted</li>
+    <li>restricts each user to the libraries they're authorised for, enforced in the database itself</li>
+    <li>gives administrators control over documents, libraries and users, plus a quality dashboard</li>
+  </ul>
+  <div class="stats">
+    <div class="stat"><b>530</b><span>pages of BIS annual reports indexed in testing</span></div>
+    <div class="stat"><b>100%</b><span>groundedness on the questions asked so far</span></div>
+    <div class="stat"><b>19–28 s</b><span>end to end per question, including the evaluator check</span></div>
+    <div class="stat"><b>69</b><span>automated tests passing (API, UI, database security)</span></div>
+  </div>
+  <div class="callout"><b>Recommendation.</b> Run a <b>10-week engagement with the client</b>, built around a <b>weekly meeting</b>, with 5–10 client users on 1–2 real research libraries. Measure time saved, citation accuracy and user satisfaction against the targets in section 13. Then decide whether to fund a production build. The prototype keeps the investment small until that value is proven.</div>
+</section>
+
+<!-- ============ PROBLEM ============ -->
+<section class="section">
+  <h2><span class="num">2</span>The problem</h2>
+  <p>The company has a substantial body of historical research, but it is published as PDF reports. That causes three problems:</p>
+  <ul>
+    <li><b>Finding information is slow.</b> A user has to know which report to open, then search inside it. Questions that span several reports or years, such as "how has the view on X changed since 2022?", mean reading many documents.</li>
+    <li><b>Value goes unused.</b> The insight is there, but the format limits how easily customers can interrogate it. Older reports are rarely revisited.</li>
+    <li><b>An enterprise build is a big bet.</b> Committing to a full enterprise knowledge platform before the concept and its customer value are proven would need a much larger investment.</li>
+  </ul>
+  <h3>Desired outcome</h3>
+  <p>A working prototype where an <b>authorised user can ask questions across a selected company's research library</b> and get useful, <b>source-grounded</b> answers they can verify. That lets the business demonstrate and assess the concept before deciding on a production build.</p>
+
+  <h3>Design principles</h3>
+  <table>
+    <tr><th style="width:28%">Principle</th><th>What it means in the design</th></tr>
+    <tr><td><b>Grounded, not generative</b></td><td>The model may only use text retrieved from the selected reports. If the reports don't cover a question, the assistant says so rather than guessing.</td></tr>
+    <tr><td><b>Verifiable in one click</b></td><td>Every factual sentence carries a citation. Clicking it opens the PDF at the exact physical page, with the supporting sentence highlighted.</td></tr>
+    <tr><td><b>Secure by default</b></td><td>Access is checked in the database (row-level security), not only in the user interface. A user cannot retrieve text from a library they haven't been granted.</td></tr>
+    <tr><td><b>Small to start, easy to grow</b></td><td>Managed services (Supabase, Vercel, DeepSeek) mean no servers to run. Each component can later be swapped for an enterprise equivalent.</td></tr>
+  </table>
+</section>
+
+<!-- ============ SOLUTION / USER WORKFLOW ============ -->
+<section class="section">
+  <h2><span class="num">3</span>The solution: what users do</h2>
+  <p class="lead">There are two roles. <b>Administrators</b> build the libraries; <b>users</b> ask questions and verify answers.</p>
+
+  <div class="grid2 keep">
+    <div>
+      <h3>Administrator workflow</h3>
+      <ol>
+        <li>Create a <b>library</b> per company or research collection.</li>
+        <li>Upload PDF reports and tag them with one or more libraries. Indexing runs automatically and shows progress page by page.</li>
+        <li>Invite users and choose which libraries each one can search.</li>
+        <li>Monitor answer quality, feedback and usage on the Insights dashboard.</li>
+      </ol>
+    </div>
+    <div>
+      <h3>User workflow</h3>
+      <ol>
+        <li>Sign in, by invitation only.</li>
+        <li>Select the libraries to search: one company or several.</li>
+        <li>Ask a question in plain language. The answer streams in with citation chips such as <code>S1</code>.</li>
+        <li>Click any citation to open the source page, and rate the answer.</li>
+      </ol>
+    </div>
+  </div>
+
+  <figure>
+    <img src="screenshots/01-answer.png" alt="Answer screen">
+    <figcaption><b>Figure 1. Asking a question in the prototype.</b> The libraries to search are on the left. The answer cites four pages of the BIS Annual Economic Report 2024 ([S1]–[S4]). The question history is kept per user.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ BRIEF MAPPING ============ -->
+<section class="section">
+  <h2><span class="num">4</span>How the proposal meets the brief</h2>
+  <p>Each requirement in the brief maps to a feature that runs in the prototype today.</p>
+  <table>
+    <tr><th style="width:26%">Requirement</th><th>How it is addressed</th><th style="width:13%">Status</th></tr>
+    <tr><td><b>Ask questions across multiple reports</b></td><td>Library selector plus a chat interface. The Query Agent splits comparative or multi-period questions into up to three sub-queries, and retrieval caps pages per report so an answer draws on several reports. Follow-up questions keep the conversation's context.</td><td><span class="pill">Built</span></td></tr>
+    <tr><td><b>Ingest, index and retrieve efficiently</b></td><td>Direct-to-storage upload. Batched page-by-page extraction with pypdf. Header and footer cleanup. Overlapping chunks with embeddings. Hybrid vector and keyword search in Postgres, fused with Reciprocal Rank Fusion.</td><td><span class="pill">Built</span></td></tr>
+    <tr><td><b>AI answers grounded in the sources</b></td><td>The Answer Agent receives only the retrieved pages and must cite every factual sentence. The Evaluator Agent checks each claim; unsupported answers are rewritten once, then flagged if they still fail.</td><td><span class="pill">Built</span></td></tr>
+    <tr><td><b>Citations, document names and page references</b></td><td>Clickable <code>[S#]</code> chips show the report title and page. A source list sits under each answer. The PDF viewer opens at the cited <i>physical</i> page with the evidence highlighted, and shows the printed page number when it differs.</td><td><span class="pill">Built</span></td></tr>
+    <tr><td><b>Restrict access to authorised users and selected libraries</b></td><td>Invite-only Supabase Auth with two roles. Per-user library grants. Row-level security on every table and in the search function. Private PDF storage served through short-lived signed URLs.</td><td><span class="pill">Built</span></td></tr>
+    <tr><td><b>Workflow, architecture and stack</b></td><td>React front end; FastAPI back end; Supabase for Postgres with pgvector, Auth, Storage and Edge Functions; DeepSeek models; deployable to Vercel. See section 5.</td><td><span class="pill">Built</span></td></tr>
+    <tr><td><b>Evaluate quality, relevance and source accuracy</b></td><td>Live: an evaluator verdict and grounded score on every answer, plus thumbs-up/down feedback, shown on the Insights dashboard. Offline: a golden-set runner measuring Recall@10, MRR, citation accuracy, faithfulness, correctness and refusal accuracy.</td><td><span class="pill">Built</span> <span class="pill todo">Golden set next</span></td></tr>
+    <tr><td><b>Demonstrate customer value before an enterprise build</b></td><td>A 10-week client engagement with weekly meetings, measurable success criteria and a go/no-go decision. See section 13.</td><td><span class="pill todo">Proposed</span></td></tr>
+  </table>
+</section>
+
+<!-- ============ ARCHITECTURE ============ -->
+<section class="section">
+  <h2><span class="num">5</span>Architecture and technology stack</h2>
+  <p>The system has three tiers: a single-page web app, a stateless Python API, and Supabase as the managed data platform. The language models are called over an API, so no model infrastructure has to be hosted.</p>
+
+  <figure>
+  <svg viewBox="0 0 760 360" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="System architecture diagram">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#64748b"/></marker>
+    </defs>
+    <!-- Browser -->
+    <rect x="10" y="20" width="200" height="150" rx="10" fill="#eef2ff" stroke="#c7d2fe"/>
+    <text x="110" y="44" text-anchor="middle" font-size="13" font-weight="700" fill="#3730a3">Web app (browser)</text>
+    <text x="110" y="64" text-anchor="middle" font-size="10.5" fill="#475569">React · Vite · Tailwind</text>
+    <text x="24" y="90" font-size="10.5" fill="#0f172a">• Ask: chat + library selector</text>
+    <text x="24" y="107" font-size="10.5" fill="#0f172a">• PDF viewer (react-pdf)</text>
+    <text x="24" y="124" font-size="10.5" fill="#0f172a">• Library browser</text>
+    <text x="24" y="141" font-size="10.5" fill="#0f172a">• Admin: docs, libraries,</text>
+    <text x="34" y="157" font-size="10.5" fill="#0f172a">users, insights</text>
+
+    <!-- API -->
+    <rect x="280" y="20" width="200" height="150" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+    <text x="380" y="44" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">API (FastAPI, Python)</text>
+    <text x="380" y="64" text-anchor="middle" font-size="10.5" fill="#475569">stateless · deployable on Vercel</text>
+    <text x="294" y="90" font-size="10.5" fill="#0f172a">• JWT check + library grants</text>
+    <text x="294" y="107" font-size="10.5" fill="#0f172a">• Batched PDF ingestion</text>
+    <text x="294" y="124" font-size="10.5" fill="#0f172a">• Query → Answer → Evaluator</text>
+    <text x="294" y="141" font-size="10.5" fill="#0f172a">• Streams answers (SSE)</text>
+    <text x="294" y="157" font-size="10.5" fill="#0f172a">• Admin endpoints</text>
+
+    <!-- DeepSeek -->
+    <rect x="550" y="20" width="200" height="150" rx="10" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="650" y="44" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">DeepSeek API</text>
+    <text x="650" y="64" text-anchor="middle" font-size="10.5" fill="#475569">OpenAI-compatible LLMs</text>
+    <text x="564" y="90" font-size="10.5" fill="#0f172a">• deepseek-flash:</text>
+    <text x="574" y="106" font-size="10.5" fill="#0f172a">Query + Evaluator agents</text>
+    <text x="564" y="126" font-size="10.5" fill="#0f172a">• deepseek-v4-pro:</text>
+    <text x="574" y="142" font-size="10.5" fill="#0f172a">Answer agent</text>
+
+    <!-- Supabase -->
+    <rect x="10" y="215" width="740" height="130" rx="10" fill="#f0fdf4" stroke="#bbf7d0"/>
+    <text x="26" y="238" font-size="13" font-weight="700" fill="#166534">Supabase (managed data platform)</text>
+    <g font-size="10.5">
+      <rect x="25" y="252" width="168" height="80" rx="7" fill="#fff" stroke="#bbf7d0"/>
+      <text x="109" y="272" text-anchor="middle" font-weight="700" fill="#0f172a">Auth</text>
+      <text x="109" y="290" text-anchor="middle" fill="#475569">invite-only sign-in</text>
+      <text x="109" y="306" text-anchor="middle" fill="#475569">JWT · roles</text>
+
+      <rect x="203" y="252" width="168" height="80" rx="7" fill="#fff" stroke="#bbf7d0"/>
+      <text x="287" y="272" text-anchor="middle" font-weight="700" fill="#0f172a">Postgres</text>
+      <text x="287" y="290" text-anchor="middle" fill="#475569">pgvector + full-text</text>
+      <text x="287" y="306" text-anchor="middle" fill="#475569">row-level security</text>
+      <text x="287" y="322" text-anchor="middle" fill="#475569">hybrid search fn</text>
+
+      <rect x="381" y="252" width="168" height="80" rx="7" fill="#fff" stroke="#bbf7d0"/>
+      <text x="465" y="272" text-anchor="middle" font-weight="700" fill="#0f172a">Storage</text>
+      <text x="465" y="290" text-anchor="middle" fill="#475569">private PDF bucket</text>
+      <text x="465" y="306" text-anchor="middle" fill="#475569">signed URLs</text>
+
+      <rect x="559" y="252" width="176" height="80" rx="7" fill="#fff" stroke="#bbf7d0"/>
+      <text x="647" y="272" text-anchor="middle" font-weight="700" fill="#0f172a">Edge Function</text>
+      <text x="647" y="290" text-anchor="middle" fill="#475569">built-in gte-small</text>
+      <text x="647" y="306" text-anchor="middle" fill="#475569">384-dim embeddings</text>
+    </g>
+
+    <!-- arrows -->
+    <line x1="212" y1="80" x2="276" y2="80" stroke="#64748b" stroke-width="1.6" marker-end="url(#ar)"/>
+    <line x1="276" y1="112" x2="212" y2="112" stroke="#64748b" stroke-width="1.6" marker-end="url(#ar)"/>
+    <text x="244" y="72" text-anchor="middle" font-size="9" fill="#64748b">HTTPS + JWT</text>
+    <text x="244" y="126" text-anchor="middle" font-size="9" fill="#64748b">SSE stream</text>
+    <line x1="482" y1="95" x2="546" y2="95" stroke="#64748b" stroke-width="1.6" marker-end="url(#ar)"/>
+    <line x1="110" y1="172" x2="110" y2="250" stroke="#64748b" stroke-width="1.6" marker-end="url(#ar)"/>
+    <text x="116" y="200" font-size="9" fill="#64748b">sign-in · direct PDF upload</text>
+    <text x="116" y="212" font-size="9" fill="#64748b">(signed upload URL)</text>
+    <line x1="350" y1="172" x2="300" y2="250" stroke="#64748b" stroke-width="1.6" marker-end="url(#ar)"/>
+    <line x1="400" y1="172" x2="460" y2="250" stroke="#64748b" stroke-width="1.6" marker-end="url(#ar)"/>
+    <line x1="450" y1="172" x2="630" y2="250" stroke="#64748b" stroke-width="1.6" marker-end="url(#ar)"/>
+    <text x="552" y="188" font-size="9" fill="#64748b">DB queries use the user's own</text><text x="552" y="200" font-size="9" fill="#64748b">token, so RLS applies</text>
+  </svg>
+  <figcaption><b>Figure 2. System architecture.</b> The browser uploads PDFs straight to Storage, so large files never pass through the API. The API reads the database with the signed-in user's token, so the same security rules apply to every query.</figcaption>
+  </figure>
+
+  <h3>Technology stack</h3>
+  <table>
+    <tr><th style="width:18%">Layer</th><th style="width:34%">Choice</th><th>Why</th></tr>
+    <tr><td>Front end</td><td>React 19, Vite, Tailwind CSS, TanStack Query, react-pdf</td><td>Fast to build and responsive. react-pdf exposes the text layer, which is used to highlight evidence.</td></tr>
+    <tr><td>API</td><td>FastAPI (Python), served on Vercel</td><td>Python has the best PDF and AI libraries, and FastAPI streams answers as server-sent events.</td></tr>
+    <tr><td>Language models</td><td>DeepSeek <code>deepseek-v4-pro</code> (answers), <code>deepseek-flash</code> (planning, evaluation)</td><td>OpenAI-compatible and low cost. The fast model keeps the per-answer check cheap. The model and reasoning effort are configurable per agent.</td></tr>
+    <tr><td>Embeddings</td><td>Supabase built-in <code>gte-small</code> via an Edge Function</td><td>No extra vendor or key. Can be swapped for a larger model in one file.</td></tr>
+    <tr><td>Database and search</td><td>Supabase Postgres, pgvector (HNSW), full-text search</td><td>Vectors, keywords, metadata and security rules in one database, so hybrid search runs in a single SQL function.</td></tr>
+    <tr><td>Auth and files</td><td>Supabase Auth and Storage</td><td>Invite-only accounts, JWTs and a private bucket, all managed.</td></tr>
+    <tr><td>Quality</td><td>pytest, Vitest, SQL security tests, golden-set evaluation, GitHub Actions CI</td><td>Every change is checked automatically; answer quality is measured, not assumed.</td></tr>
+  </table>
+</section>
+
+<!-- ============ INGESTION ============ -->
+<section class="section">
+  <h2><span class="num">6</span>Ingestion, indexing and retrieval</h2>
+
+  <figure>
+  <svg viewBox="0 0 760 92" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ingestion pipeline">
+    <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#64748b"/></marker></defs>
+    <g font-size="10.5" text-anchor="middle">
+      <rect x="2" y="14" width="112" height="62" rx="8" fill="#eef2ff" stroke="#c7d2fe"/><text x="58" y="40" font-weight="700">Upload</text><text x="58" y="57" fill="#475569">to private bucket</text>
+      <rect x="130" y="14" width="112" height="62" rx="8" fill="#f8fafc" stroke="#cbd5e1"/><text x="186" y="40" font-weight="700">Extract</text><text x="186" y="57" fill="#475569">pypdf, 25 pages/call</text>
+      <rect x="258" y="14" width="112" height="62" rx="8" fill="#f8fafc" stroke="#cbd5e1"/><text x="314" y="40" font-weight="700">Index pages</text><text x="314" y="57" fill="#475569">physical page no.</text>
+      <rect x="386" y="14" width="112" height="62" rx="8" fill="#f8fafc" stroke="#cbd5e1"/><text x="442" y="40" font-weight="700">Clean + chunk</text><text x="442" y="57" fill="#475569">~1,800 chars</text>
+      <rect x="514" y="14" width="112" height="62" rx="8" fill="#f0fdf4" stroke="#bbf7d0"/><text x="570" y="40" font-weight="700">Embed</text><text x="570" y="57" fill="#475569">gte-small</text>
+      <rect x="642" y="14" width="114" height="62" rx="8" fill="#f0fdf4" stroke="#bbf7d0"/><text x="699" y="40" font-weight="700">Store</text><text x="699" y="57" fill="#475569">vectors + full text</text>
+    </g>
+    <g stroke="#64748b" stroke-width="1.6" marker-end="url(#ar2)">
+      <line x1="114" y1="45" x2="128" y2="45"/><line x1="242" y1="45" x2="256" y2="45"/><line x1="370" y1="45" x2="384" y2="45"/><line x1="498" y1="45" x2="512" y2="45"/><line x1="626" y1="45" x2="640" y2="45"/>
+    </g>
+  </svg>
+  <figcaption><b>Figure 3. Ingestion pipeline.</b></figcaption>
+  </figure>
+
+  <h3>Reliable page references</h3>
+  <p>Published reports often number pages with roman numerals in the front matter, or restart numbering in each section. The prototype therefore <b>does not rely on the printed page number</b>. It records every page by its physical position in the file (<code>page_index</code>), and every citation uses that number. The printed label is kept only for display. Of the 10 test reports collected (5 Federal Reserve, 5 BIS), 6 have printed page numbers that differ from their physical positions; the viewer shows both, e.g. "page 51 (printed 31)".</p>
+
+  <h3>Efficient, resumable ingestion</h3>
+  <ul>
+    <li><b>Direct upload.</b> The browser uploads each PDF straight to Supabase Storage with a signed URL, which avoids API request-size limits.</li>
+    <li><b>Batched processing.</b> The API processes 25 pages per request and reports progress. A failed document can <b>resume</b> where it stopped, and re-running a batch is safe.</li>
+    <li><b>Text cleanup.</b> Headers and footers repeated on more than half the pages are removed, and words hyphenated across line breaks are rejoined.</li>
+    <li><b>Quality flags.</b> Pages with no extractable text, such as scanned images or blank dividers, are flagged in the admin panel.</li>
+  </ul>
+
+  <h3>Hybrid retrieval</h3>
+  <ul>
+    <li>Each page is split into overlapping ~1,800-character chunks, the size the embedding model reads well. Every chunk keeps its page number.</li>
+    <li>A single SQL function, <code>match_chunks</code>, runs two searches inside the database: <b>semantic similarity</b> (pgvector, HNSW index) and <b>keyword search</b> (Postgres full-text). It merges their rankings with <b>Reciprocal Rank Fusion</b>. Semantic search finds paraphrases; keyword search catches names, tickers and exact phrases.</li>
+    <li>Hits are rolled up to pages. A page scores its best chunk for each sub-query, so evidence found by several sub-queries ranks higher. The top 8 pages go to the Answer Agent, with at most 4 per report so several reports can contribute.</li>
+    <li>The Answer Agent gets the <b>whole page</b>, not a fragment, so it has full context.</li>
+  </ul>
+</section>
+
+<!-- ============ AGENTS ============ -->
+<section class="section">
+  <h2><span class="num">7</span>Grounded answers: the multi-agent pipeline</h2>
+  <p>Three specialised agents handle each question. Splitting the work keeps each prompt simple and makes the answer checkable.</p>
+
+  <figure>
+  <svg viewBox="0 0 760 150" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Question answering pipeline">
+    <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#64748b"/></marker></defs>
+    <g font-size="10.5" text-anchor="middle">
+      <rect x="2" y="20" width="110" height="64" rx="8" fill="#eef2ff" stroke="#c7d2fe"/><text x="57" y="47" font-weight="700">Question</text><text x="57" y="64" fill="#475569">+ libraries</text>
+      <rect x="132" y="20" width="130" height="64" rx="8" fill="#fffbeb" stroke="#fde68a"/><text x="197" y="44" font-weight="700">Query Agent</text><text x="197" y="60" fill="#475569">rewrite · split into</text><text x="197" y="74" fill="#475569">sub-queries · keywords</text>
+      <rect x="282" y="20" width="120" height="64" rx="8" fill="#f0fdf4" stroke="#bbf7d0"/><text x="342" y="47" font-weight="700">Hybrid search</text><text x="342" y="64" fill="#475569">RLS-restricted</text>
+      <rect x="422" y="20" width="130" height="64" rx="8" fill="#fffbeb" stroke="#fde68a"/><text x="487" y="44" font-weight="700">Answer Agent</text><text x="487" y="60" fill="#475569">sources only ·</text><text x="487" y="74" fill="#475569">cites every claim</text>
+      <rect x="572" y="20" width="130" height="64" rx="8" fill="#fffbeb" stroke="#fde68a"/><text x="637" y="44" font-weight="700">Evaluator Agent</text><text x="637" y="60" fill="#475569">checks each claim</text><text x="637" y="74" fill="#475569">vs. cited page</text>
+    </g>
+    <g stroke="#64748b" stroke-width="1.6" marker-end="url(#ar3)">
+      <line x1="112" y1="52" x2="130" y2="52"/><line x1="262" y1="52" x2="280" y2="52"/><line x1="402" y1="52" x2="420" y2="52"/><line x1="552" y1="52" x2="570" y2="52"/>
+      <line x1="702" y1="52" x2="752" y2="52"/>
+    </g>
+    <path d="M637 86 C637 128, 487 128, 487 88" fill="none" stroke="#b45309" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ar3)"/>
+    <text x="562" y="138" font-size="10" text-anchor="middle" fill="#b45309">unsupported claims → rewrite once with feedback</text>
+    <text x="729" y="40" font-size="10" text-anchor="middle" fill="#166534">answer +</text>
+    <text x="729" y="70" font-size="10" text-anchor="middle" fill="#166534">verdict</text>
+  </svg>
+  <figcaption><b>Figure 4. Question-answering pipeline.</b> The answer streams to the user as it is written. The evaluator's verdict and evidence quotes are attached when it finishes.</figcaption>
+  </figure>
+
+  <table>
+    <tr><th style="width:20%">Agent</th><th style="width:20%">Model</th><th>Responsibility</th></tr>
+    <tr><td><b>Query Agent</b></td><td>deepseek-flash (no reasoning, for speed)</td><td>Turns the question and chat history into a standalone question, 1–3 focused sub-queries for comparative or multi-period questions, and keywords for the keyword search.</td></tr>
+    <tr><td><b>Answer Agent</b></td><td>deepseek-v4-pro (low reasoning effort)</td><td>Answers <b>only</b> from the retrieved pages and cites every factual sentence. Points out changes between reports and periods. If the sources don't cover the question, it says so instead of guessing.</td></tr>
+    <tr><td><b>Evaluator Agent</b></td><td>deepseek-flash (low reasoning effort)</td><td>For every claim, records supported, partial or unsupported, whether the citation is correct, and a verbatim evidence quote. Produces a grounded score from 0 to 1. Citations to sources that don't exist are always marked wrong.</td></tr>
+  </table>
+  <p><b>Quality gate.</b> If any claim is unsupported, or the grounded score is below 0.75, the answer is rewritten <b>once</b> using the evaluator's findings and checked again. If it still fails, it is shown with a "Low confidence: verify before use" badge rather than hidden.</p>
+
+  <figure>
+    <img style="width:82%;margin:0 auto" src="screenshots/03-evaluator.png" alt="Evaluator result under an answer">
+    <figcaption><b>Figure 5. The evaluator's verdict is visible to the user.</b> The source list sits under the answer, followed by the groundedness badge, which expands into the claim-by-claim check.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ CITATIONS ============ -->
+<section class="section">
+  <h2><span class="num">8</span>Citations and verification</h2>
+  <p>Trust depends on users being able to check an answer quickly. The prototype makes verification a single click.</p>
+  <ul>
+    <li>Each <code>[S#]</code> marker in an answer is a clickable chip. Hovering shows the report title and page.</li>
+    <li>A <b>Sources</b> list under every answer gives the report name and physical page for each citation, plus the printed page number when it differs.</li>
+    <li>Clicking a citation opens the PDF in a side panel <b>at the cited page</b>. The evaluator's evidence quote is <b>highlighted</b> on the page and scrolled into view.</li>
+    <li>Users can page through the document, zoom, return to the cited page, or open the original PDF in a new tab.</li>
+  </ul>
+  <figure>
+    <img src="screenshots/02-answer-with-pdf.png" alt="Citation opened in the PDF viewer with highlighted evidence">
+    <figcaption><b>Figure 6. One-click verification.</b> Clicking citation S4 opens the BIS Annual Economic Report 2024 at page 18 of 150 and highlights the sentence the claim relies on: "…could offer breakthroughs in nowcasting economic activity and in the monitoring of…".</figcaption>
+  </figure>
+</section>
+
+<!-- ============ ACCESS ============ -->
+<section class="section">
+  <h2><span class="num">9</span>Access control</h2>
+  <p>Restricting each user to the research libraries they are entitled to is enforced at several layers, so a bug in one layer doesn't expose data.</p>
+  <table>
+    <tr><th style="width:24%">Layer</th><th>Control</th></tr>
+    <tr><td><b>Identity</b></td><td>Supabase Auth with email and password or a one-time link. Accounts are <b>invitation-only</b>; there is no public sign-up.</td></tr>
+    <tr><td><b>Roles and grants</b></td><td>Users are <code>admin</code> or <code>user</code>. Admins grant each user specific libraries, and the label on a report decides which libraries it belongs to.</td></tr>
+    <tr><td><b>Database (main control)</b></td><td>Postgres <b>row-level security</b> on documents, pages, chunks, libraries, conversations and messages. A user sees a document only if it carries a library they hold. The search function runs with the caller's permissions, so naming another library's id still returns nothing.</td></tr>
+    <tr><td><b>API</b></td><td>Verifies the user's token, intersects the requested libraries with the user's grants before any search, and queries the database with the user's own token.</td></tr>
+    <tr><td><b>Files</b></td><td>PDFs sit in a private bucket. A short-lived signed URL is issued only after the database confirms the user can see the document.</td></tr>
+    <tr><td><b>Privacy</b></td><td>Conversations are private to their owner. Administrators can read answers in Insights, so they can review quality.</td></tr>
+  </table>
+  <div class="callout ok"><b>Tested.</b> 24 automated database checks run the migrations against a real Postgres with pgvector. They confirm that users cannot see other libraries' documents, chunks or search results, cannot promote themselves or grant themselves access, and cannot read other users' conversations.</div>
+  <figure>
+    <img src="screenshots/05-users.png" alt="User management">
+    <figcaption><b>Figure 7. User management.</b> Admins invite users, set their role, and choose which libraries each one can search.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ ADMIN ============ -->
+<section class="section">
+  <h2><span class="num">10</span>Administration</h2>
+  <p>Administrators run the libraries without technical help.</p>
+  <ul>
+    <li><b>Documents:</b> drag-and-drop upload with per-file progress, library tagging, status (processing, ready or failed) with error details, resume, re-index and delete, and warnings for pages without text.</li>
+    <li><b>Libraries:</b> create, rename and colour libraries; see document and user counts; bulk-assign reports.</li>
+    <li><b>Users:</b> invite, set roles, and grant libraries, as shown in figure 7.</li>
+    <li><b>Insights:</b> documents indexed, questions asked, average groundedness, answers revised by the evaluator, the helpful rate, and a filterable question log with latency and token usage.</li>
+  </ul>
+  <figure>
+    <img src="screenshots/04-documents.png" alt="Document management">
+    <figcaption><b>Figure 8. Document management.</b> Real BIS Annual Economic Reports (2022–2025), tagged with libraries. The 2025 report shows resumable batch indexing in progress (100 of 126 pages).</figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/06-insights.png" alt="Insights dashboard">
+    <figcaption><b>Figure 9. Insights dashboard.</b> The evidence base for a go/no-go decision: groundedness, feedback, and every question with its verdict and latency.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ EVALUATION ============ -->
+<section class="section">
+  <h2><span class="num">11</span>Evaluating answer quality</h2>
+  <p>Quality is measured in two complementary ways: continuously on every live answer, and offline against an expert-written test set before any change ships.</p>
+
+  <h3>Live, on every answer</h3>
+  <ul>
+    <li>The Evaluator Agent's verdict, grounded score and claim checks are stored with the answer.</li>
+    <li>Users rate answers with thumbs up or down and an optional note.</li>
+    <li>Insights tracks the trends and lists low-confidence and no-source questions. These show gaps in the library or in retrieval.</li>
+  </ul>
+
+  <h3>Offline, against a golden set</h3>
+  <p>A domain expert writes 30–50 questions across four types: single fact, cross-report synthesis, comparison over time, and unanswerable (the assistant must decline). Each question records the expected report pages and a reference answer. The included runner (<code>evals/run_eval.py</code>) sends them through the same pipeline the app uses and reports:</p>
+  <table>
+    <tr><th style="width:26%">Metric</th><th>What it measures</th><th style="width:14%">Target</th></tr>
+    <tr><td>Recall@10, MRR</td><td><b>Relevance of retrieval:</b> were the expected pages found, and how high did the first one rank?</td><td>≥ 0.85</td></tr>
+    <tr><td>Citation accuracy</td><td><b>Source accuracy:</b> does each cited page actually contain the claim? Scored by an LLM judge, with about 20 verdicts checked by hand.</td><td>≥ 0.90</td></tr>
+    <tr><td>Faithfulness</td><td>Share of claims supported by the cited sources.</td><td>track</td></tr>
+    <tr><td>Correctness, relevance</td><td><b>Answer quality</b> against the expert's reference answer, on a 1–5 scale.</td><td>track</td></tr>
+    <tr><td>Refusal accuracy</td><td>Unanswerable questions are declined, not answered.</td><td>≥ 0.90</td></tr>
+    <tr><td>Latency, tokens</td><td>Time to answer (p50/p95) and cost per question.</td><td>track</td></tr>
+  </table>
+  <p>Reports are saved as CSV and markdown, so runs before and after a change to prompts, chunking or retrieval can be compared side by side.</p>
+</section>
+
+<!-- ============ STATUS ============ -->
+<section class="section">
+  <h2><span class="num">12</span>Prototype status and evidence</h2>
+  <div class="stats">
+    <div class="stat"><b>4</b><span>BIS reports uploaded (3 fully indexed)</span></div>
+    <div class="stat"><b>530</b><span>pages indexed · 1,215 chunks</span></div>
+    <div class="stat"><b>≈ 9k / 4k</b><span>input / output tokens per question</span></div>
+    <div class="stat"><b>&lt; US$0.04</b><span>model cost per question at DeepSeek peak list prices</span></div>
+  </div>
+  <h3>What works today</h3>
+  <table>
+    <tr><th>Capability</th><th style="width:14%">Status</th></tr>
+    <tr><td>Invite-only sign-in, admin and user roles, per-user library grants</td><td><span class="pill">Working</span></td></tr>
+    <tr><td>PDF upload, batched indexing with progress, resume and re-index</td><td><span class="pill">Working</span></td></tr>
+    <tr><td>Hybrid semantic and keyword search, restricted by database security</td><td><span class="pill">Working</span></td></tr>
+    <tr><td>Three-agent answering with streaming, citations and an evaluator quality gate</td><td><span class="pill">Working</span></td></tr>
+    <tr><td>PDF viewer that opens at the cited page and highlights the evidence</td><td><span class="pill">Working</span></td></tr>
+    <tr><td>Admin panel: documents, libraries, users, insights</td><td><span class="pill">Working</span></td></tr>
+    <tr><td>Automated tests: 38 API, 7 front end, 24 database security; CI pipeline</td><td><span class="pill">Passing</span></td></tr>
+    <tr><td>Golden-set evaluation runner</td><td><span class="pill">Built</span></td></tr>
+    <tr><td>Golden set written with a domain expert and baseline scores</td><td><span class="pill todo">Next step</span></td></tr>
+  </table>
+
+  <h3>Findings from early testing</h3>
+  <div class="callout ok"><b>Strong single-report answer.</b> "What does the BIS 2024 report say about how central banks can use artificial intelligence?" produced a structured answer citing four pages (pages 18, 111, 112 and 113). The evaluator rated it 100% grounded, and the evidence was highlighted correctly in the viewer (figures 1, 5 and 6). Time: 18.8 s.</div>
+  <div class="callout warn"><b>Retrieval weakness found.</b> For a broad comparative question about inflation across the 2022 and 2024 reports, search returned mainly <b>reference lists and endnotes</b>. Those pages are dense with titles containing the search terms. The assistant correctly said the sources didn't contain the assessment instead of inventing one, but the right pages were missed. <b>Fix planned:</b> detect bibliography and endnote pages at ingestion and exclude or down-weight them in search, then confirm with the golden set.</div>
+  <p class="small">These are early, qualitative observations from a small number of questions. They are not yet a measured benchmark; the golden-set runs during the client engagement will provide one.</p>
+</section>
+
+<!-- ============ ENGAGEMENT ============ -->
+<section class="section compact">
+  <h2><span class="num">13</span>Proving customer value: 10-week client engagement</h2>
+  <p>The prototype is ready to put in front of the client. Over <b>10 weeks</b> we hold a <b>weekly meeting with the client</b>: we show progress in the live prototype, review results together, and agree the priorities for the next week. Every week is shaped by the client's feedback, and the engagement answers the question that matters before a larger investment: <b>do customers get faster, trustworthy answers from the research they already pay for?</b></p>
+
+  <table>
+    <tr><th style="width:11%">Week</th><th style="width:44%">Weekly client meeting</th><th>Work between meetings</th></tr>
+    <tr><td><b>1</b></td><td>Kick-off: agree goals, success criteria, the research libraries in scope and the users taking part.</td><td>Receive the client's reports and set up the client's environment.</td></tr>
+    <tr><td><b>2</b></td><td>Walk through the prototype on the client's own reports. Review the first answers together.</td><td>Load 1–2 libraries. Fix the reference-page retrieval issue.</td></tr>
+    <tr><td><b>3</b></td><td>Agree the golden set of test questions with the client's domain expert.</td><td>Write the golden set and record baseline quality scores.</td></tr>
+    <tr><td><b>4</b></td><td>Review baseline scores. Agree the access rules: which users see which libraries.</td><td>Tune retrieval and prompts. Configure user accounts and library access.</td></tr>
+    <tr><td><b>5</b></td><td>Onboard 5–10 client users with a short walkthrough.</td><td>Run a timed task study: real questions answered manually versus with the assistant.</td></tr>
+    <tr><td><b>6</b></td><td>Review the timed-task results and early user feedback.</td><td>Act on feedback. Re-run the golden set after each change.</td></tr>
+    <tr><td><b>7</b></td><td>Review Insights: low-confidence answers, questions with no sources, ratings.</td><td>Close gaps in the library and in retrieval. Add reports the client requests.</td></tr>
+    <tr><td><b>8</b></td><td>Demo the improvements. Agree any final adjustments.</td><td>Final tuning. Golden-set run against the targets.</td></tr>
+    <tr><td><b>9</b></td><td>Short interviews with the client's users. Review results against the success criteria.</td><td>Compile results, costs and the production options.</td></tr>
+    <tr><td><b>10</b></td><td>Final review: results, recommendation and the go/no-go decision on a production build.</td><td>Hand over the final report and the prototype.</td></tr>
+  </table>
+
+<h3>Success criteria for "go" (reviewed in weeks 9–10)</h3>
+  <table>
+    <tr><th>Measure</th><th style="width:28%">Target</th></tr>
+    <tr><td>Time to answer a research question versus manual PDF search</td><td>≥ 50% faster</td></tr>
+    <tr><td>Citation accuracy (golden set)</td><td>≥ 90%</td></tr>
+    <tr><td>Retrieval Recall@10 (golden set)</td><td>≥ 85%</td></tr>
+    <tr><td>Unanswerable questions correctly declined</td><td>≥ 90%</td></tr>
+    <tr><td>Answers rated helpful by client users</td><td>≥ 70%</td></tr>
+    <tr><td>Client users who would use it weekly</td><td>≥ 60%</td></tr>
+  </table>
+
+  <h3>Demo script (3–5 minutes)</h3>
+  <ol>
+    <li>Pick a library and ask a single-report question. Click a citation and show the highlighted evidence.</li>
+    <li>Ask a question that spans several reports and show citations from each.</li>
+    <li>Ask something the library doesn't cover and show the assistant declining.</li>
+    <li>Admin: restrict a user to one library, then show the other library disappear for them.</li>
+    <li>Insights: show groundedness and feedback as the basis for the decision.</li>
+  </ol>
+</section>
+
+<!-- ============ RISKS ============ -->
+<section class="section">
+  <h2><span class="num">14</span>Risks, limits and the path to production</h2>
+  <h3>Known limits of the prototype</h3>
+  <table>
+    <tr><th style="width:30%">Limit</th><th>Impact and mitigation</th></tr>
+    <tr><td>Reference and endnote pages can crowd out body text</td><td>Seen in testing. Exclude or down-weight them at ingestion (engagement week 2).</td></tr>
+    <tr><td>Embedding model is small and English-only (gte-small)</td><td>Hybrid keyword search compensates. Swapping to a larger or multilingual model changes one file.</td></tr>
+    <tr><td>Scanned PDFs, tables and charts</td><td>Pages without a text layer are flagged but not indexed. Tables are read as plain text. Add OCR and layout-aware extraction in production.</td></tr>
+    <tr><td>Response time of 19–28 s</td><td>The answer streams as it is written, so text appears sooner. The evaluator check and model reasoning add time; reasoning effort is configurable per agent.</td></tr>
+    <tr><td>Evaluator judges itself generously at times</td><td>An honest "not covered" reply was rated 100% grounded. Spot-check judge verdicts by hand and consider a judge from a different model family for offline evaluation.</td></tr>
+    <tr><td>Data sent to a third-party model API</td><td>Only retrieved excerpts are sent, never whole libraries. Confirm the provider's data terms, or use an approved provider or region, before using sensitive research.</td></tr>
+  </table>
+
+  <h3>What a production build would add</h3>
+  <div class="grid2">
+    <ul>
+      <li>OCR and layout-aware extraction for tables and figures</li>
+      <li>A background ingestion queue for large volumes</li>
+      <li>A re-ranking step after hybrid search</li>
+      <li>SSO/SAML and automated user provisioning (SCIM)</li>
+    </ul>
+    <ul>
+      <li>Audit logging of document access and answers</li>
+      <li>Per-tenant isolation for each customer</li>
+      <li>Usage metering, quotas and rate limits</li>
+      <li>Data-retention and deletion controls</li>
+    </ul>
+  </div>
+
+  <div class="callout" style="margin-top:14px"><b>Conclusion.</b> The concept is no longer theoretical. A working prototype already answers questions across real research reports with verifiable, page-level citations and database-enforced access control. A 10-week engagement with weekly client meetings is a low-cost way to measure its value before committing to a full enterprise implementation.</div>
+</section>
+
+</body>
+</html>

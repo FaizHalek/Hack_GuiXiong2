@@ -2,7 +2,7 @@
 -- Reciprocal Rank Fusion. SECURITY INVOKER so the caller's RLS still applies.
 
 create or replace function public.match_chunks(
-  query_embedding  extensions.vector(1024),
+  query_embedding  extensions.vector(384),
   query_text       text,
   label_ids        uuid[],
   match_count      int default 12,
@@ -15,6 +15,7 @@ returns table (
   page_index      int,
   printed_label   text,
   content         text,
+  page_text       text,
   score           double precision
 )
 language plpgsql
@@ -63,7 +64,7 @@ begin
     from vec v
     full outer join kw k on k.id = v.id
   )
-  select c.id, c.document_id, a.title, c.page_index, p.printed_label, c.content,
+  select c.id, c.document_id, a.title, c.page_index, p.printed_label, c.content, p.text,
          f.score::double precision
   from fused f
   join chunks c on c.id = f.id

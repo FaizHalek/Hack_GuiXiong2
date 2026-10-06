@@ -95,8 +95,44 @@ export interface QueryLog {
   input_tokens: number | null
   output_tokens: number | null
   created_at: string
+  label_ids: string[]
+  /** Query Agent output */
+  plan: QueryPlan | null
+  /** What retrieval returned, in the order the Answer Agent saw it */
+  retrieved: RetrievedSource[]
+  /** Set when the Evaluator rejected the first draft and forced a rewrite */
+  first_draft: { answer: string; eval: EvalResult } | null
   profiles: { email: string } | null
-  messages: { content: string; feedback: 1 | -1 | null; feedback_note: string | null; citations: Citation[] } | null
+  messages: {
+    content: string
+    feedback: 1 | -1 | null
+    feedback_note: string | null
+    citations: Citation[]
+    /** Evaluator Agent output for the final answer */
+    eval: EvalResult | null
+  } | null
+}
+
+export interface QueryPlan {
+  needs_retrieval: boolean
+  standalone_question: string
+  sub_queries: string[]
+  keywords: string[]
+  direct_reply: string
+}
+
+export interface RetrievedSource {
+  id: string // "S1"
+  document_id: string
+  document_title: string
+  page_index: number
+  printed_label: string | null
+  /** Fused search score; null for questions logged before scores were stored */
+  score: number | null
+  /** The chunk that matched the search */
+  matched: string
+  /** Whether the final answer cited it */
+  cited: boolean
 }
 
 export interface AdminStats {

@@ -4,6 +4,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
+from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
 
 from app.agents import pipeline
@@ -61,6 +62,7 @@ def chat(req: ChatRequest, user: CurrentUser = Depends(get_current_user)):
             for event in pipeline.run(db, req.question, labels, history):
                 if event["type"] == "final":
                     event["message_id"] = _persist(user, conversation_id, req.question, labels, event)
+                    event.pop("trace", None)
                 yield _sse(event)
         except RefusalError:
             yield _sse({"type": "error", "message": "The assistant declined to answer this request."})
@@ -95,23 +97,28 @@ def _persist(user: CurrentUser, conversation_id: str, question: str, labels: lis
             .execute()
             .data[0]["id"]
         )
-        db.table("query_logs").insert(
-            {
-                "user_id": user.id,
-                "conversation_id": conversation_id,
-                "message_id": message_id,
-                "question": question,
-                "label_ids": labels,
-                "plan": final["plan"],
-                "retrieved_chunk_ids": final["retrieved_chunk_ids"],
-                "grounded_score": final["eval"].get("grounded_score"),
-                "verdict": final["eval"].get("verdict"),
-                "regenerated": final["regenerated"],
-                "latency_ms": final["latency_ms"],
-                "input_tokens": final["usage"]["input_tokens"],
-                "output_tokens": final["usage"]["output_tokens"],
-            }
-        ).execute()
+        row = {
+            "user_id": user.id,
+            "conversation_id": conversation_id,
+            "message_id": message_id,
+            "question": question,
+            "label_ids": labels,
+            "plan": final["plan"],
+            "retrieved_chunk_ids": final["retrieved_chunk_ids"],
+            "grounded_score": final["eval"].get("grounded_score"),
+            "verdict": final["eval"].get("verdict"),
+            "regenerated": final["regenerated"],
+            "latency_ms": final["latency_ms"],
+            "input_tokens": final["usage"]["input_tokens"],
+            "output_tokens": final["usage"]["output_tokens"],
+        }
+        trace = {"retrieved": final["trace"]["retrieved"], "first_draft": final["trace"]["first_draft"]}
+        try:
+            db.table("query_logs").insert({**row, **trace}).execute()
+        except APIError:
+            # Database without migration 0004 (no trace columns): keep the log, drop the trace.
+            log.warning("query_logs has no trace columns; run supabase/migrations/0004_query_trace.sql")
+            db.table("query_logs").insert(row).execute()
         db.table("conversations").update({"label_ids": labels}).eq("id", conversation_id).execute()
         return message_id
     except Exception:

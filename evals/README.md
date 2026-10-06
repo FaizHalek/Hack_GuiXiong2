@@ -39,4 +39,4 @@ From `backend/`, with `backend/.env` filled in:
 .venv/Scripts/python ../evals/run_eval.py --golden ../evals/golden_set.jsonl --limit 5 --no-judge   # quick and cheap
 ```
 
-Every run calls DeepSeek and Voyage, so it costs money. A 40-question run makes about four DeepSeek calls per question, plus the judge. Reports go to `evals/reports/`: a CSV with one row per question, and a markdown summary that lists the weakest answers. Compare reports before and after you change prompts, chunking or retrieval settings.
+Every run calls DeepSeek (and the embeddings Edge Function), so it costs money. A 40-question run makes about four DeepSeek calls per question, plus the judge. Reports go to `evals/reports/`: a CSV with one row per question, and a markdown summary that lists the weakest answers. Compare reports before and after you change prompts, chunking or retrieval settings.

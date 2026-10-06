@@ -1,8 +1,10 @@
 """Hybrid retrieval over the caller's authorised libraries.
 
 Runs `match_chunks` (vector + full-text, RRF-fused, RLS-enforced) once per
-sub-query, merges the results, and applies diversity caps so one report or
-page can't crowd out the rest.
+sub-query. Chunks are small (the embedding model reads 512 tokens), so results
+are rolled up to pages: a page scores its best chunk per sub-query, summed
+across sub-queries, and the Answer Agent receives the whole page text. A
+per-report cap keeps one report from crowding out the rest.
 """
 
 from collections import defaultdict
@@ -11,7 +13,7 @@ from supabase import Client
 
 from app.agents.schemas import QueryPlan, Source
 from app.config import get_settings
-from app.llm import voyage
+from app.llm import embeddings
 
 
 def fts_text(keywords: list[str], fallback: str) -> str:
@@ -20,17 +22,33 @@ def fts_text(keywords: list[str], fallback: str) -> str:
     return " or ".join(terms) if terms else fallback
 
 
-def diversify(ranked: list[dict], limit: int, per_page: int, per_doc: int) -> list[dict]:
-    page_counts: dict[tuple, int] = defaultdict(int)
+PageKey = tuple[str, int]
+
+
+def rank_pages(results_per_query: list[list[dict]]) -> list[dict]:
+    """Roll chunk hits up to pages; returns page rows sorted by score."""
+    pages: dict[PageKey, dict] = {}
+    for rows in results_per_query:
+        best_this_query: dict[PageKey, float] = {}
+        for row in rows:
+            key = (row["document_id"], row["page_index"])
+            page = pages.setdefault(key, {**row, "score": 0.0, "best_chunk_score": -1.0})
+            if row["score"] > page["best_chunk_score"]:
+                page.update(chunk_id=row["chunk_id"], content=row["content"], best_chunk_score=row["score"])
+            best_this_query[key] = max(best_this_query.get(key, 0.0), row["score"])
+        for key, score in best_this_query.items():
+            pages[key]["score"] += score  # pages relevant to several sub-queries rank higher
+    return sorted(pages.values(), key=lambda p: p["score"], reverse=True)
+
+
+def cap_per_document(pages: list[dict], limit: int, per_doc: int) -> list[dict]:
     doc_counts: dict[str, int] = defaultdict(int)
     picked = []
-    for row in ranked:
-        page_key = (row["document_id"], row["page_index"])
-        if page_counts[page_key] >= per_page or doc_counts[row["document_id"]] >= per_doc:
+    for page in pages:
+        if doc_counts[page["document_id"]] >= per_doc:
             continue
-        page_counts[page_key] += 1
-        doc_counts[row["document_id"]] += 1
-        picked.append(row)
+        doc_counts[page["document_id"]] += 1
+        picked.append(page)
         if len(picked) >= limit:
             break
     return picked
@@ -39,45 +57,37 @@ def diversify(ranked: list[dict], limit: int, per_page: int, per_doc: int) -> li
 def retrieve(db: Client, plan: QueryPlan, label_ids: list[str]) -> list[Source]:
     s = get_settings()
     queries = plan.sub_queries
-    vectors = voyage.embed(queries, input_type="query")
+    vectors = embeddings.embed(queries)
     keyword_query = fts_text(plan.keywords, "")
 
-    merged: dict[str, dict] = {}
-    for query, vector in zip(queries, vectors, strict=True):
-        rows = (
-            db.rpc(
-                "match_chunks",
-                {
-                    "query_embedding": vector,
-                    "query_text": keyword_query or query,
-                    "label_ids": label_ids,
-                    "match_count": s.match_count,
-                },
-            )
-            .execute()
-            .data
-            or []
+    results = [
+        db.rpc(
+            "match_chunks",
+            {
+                "query_embedding": vector,
+                "query_text": keyword_query or query,
+                "label_ids": label_ids,
+                "match_count": s.match_count,
+            },
         )
-        for row in rows:
-            existing = merged.get(row["chunk_id"])
-            if existing:
-                existing["score"] += row["score"]  # evidence for several sub-queries ranks higher
-            else:
-                merged[row["chunk_id"]] = dict(row)
-
-    ranked = sorted(merged.values(), key=lambda r: r["score"], reverse=True)
-    picked = diversify(ranked, s.context_chunks, s.max_chunks_per_page, s.max_chunks_per_document)
+        .execute()
+        .data
+        or []
+        for query, vector in zip(queries, vectors, strict=True)
+    ]
+    picked = cap_per_document(rank_pages(results), s.context_pages, s.max_pages_per_document)
 
     return [
         Source(
             id=f"S{i}",
-            chunk_id=row["chunk_id"],
-            document_id=row["document_id"],
-            document_title=row["document_title"],
-            page_index=row["page_index"],
-            printed_label=row.get("printed_label"),
-            content=row["content"],
-            score=row["score"],
+            chunk_id=page["chunk_id"],
+            document_id=page["document_id"],
+            document_title=page["document_title"],
+            page_index=page["page_index"],
+            printed_label=page.get("printed_label"),
+            content=page.get("page_text") or page["content"],
+            score=page["score"],
+            matched=page["content"],
         )
-        for i, row in enumerate(picked, start=1)
+        for i, page in enumerate(picked, start=1)
     ]

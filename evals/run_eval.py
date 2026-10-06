@@ -151,12 +151,19 @@ def run_one(db, item: dict, docs: dict[str, str], k: int, use_judge: bool) -> di
             final = event
     elapsed = time.monotonic() - started
 
-    # The sources event carries truncated snippets; fetch full chunk text for judging.
+    # The sources event carries truncated snippets; fetch the full page text the model saw.
     if sources:
-        full = db.table("chunks").select("id,content").in_("id", [s.chunk_id for s in sources]).execute().data
-        text = {row["id"]: row["content"] for row in full}
+        rows = (
+            db.table("pages")
+            .select("document_id,page_index,text")
+            .in_("document_id", sorted({s.document_id for s in sources}))
+            .in_("page_index", sorted({s.page_index for s in sources}))
+            .execute()
+            .data
+        )
+        text = {(r["document_id"], r["page_index"]): r["text"] for r in rows}
         for s in sources:
-            s.content = text.get(s.chunk_id, s.content)
+            s.content = text.get((s.document_id, s.page_index), s.content)
 
     retrieved = [(s.document_id, s.page_index) for s in sources]
     row = {

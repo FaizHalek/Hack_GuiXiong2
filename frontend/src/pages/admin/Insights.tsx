@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
 import { ThumbsDown, ThumbsUp } from 'lucide-react'
 import { Fragment, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
 import { Card, EmptyState, ErrorNote, Spinner } from '../../components/ui'
 import { get } from '../../lib/api'
 import type { AdminStats, QueryLog, Verdict } from '../../lib/types'
+import { QueryTrace } from './QueryTrace'
 
 const VERDICT_STYLE: Record<string, string> = {
   grounded: 'bg-green-50 text-green-700',
@@ -115,20 +115,10 @@ export function Insights() {
                       {log.latency_ms !== null && `${(log.latency_ms / 1000).toFixed(1)}s`}
                     </td>
                   </tr>
-                  {open === log.id && log.messages && (
+                  {open === log.id && (
                     <tr>
                       <td colSpan={5} className="bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                        <ReactMarkdown>{log.messages.content}</ReactMarkdown>
-                        {log.messages.citations?.length > 0 && (
-                          <p className="mt-2 text-xs text-slate-500">
-                            Cited:{' '}
-                            {log.messages.citations.map((c) => `${c.id} ${c.document_title} p.${c.page_index}`).join(' · ')}
-                          </p>
-                        )}
-                        {log.messages.feedback_note && <p className="mt-2 text-xs italic">“{log.messages.feedback_note}”</p>}
-                        <p className="mt-2 text-xs text-slate-400">
-                          {log.input_tokens} input / {log.output_tokens} output tokens
-                        </p>
+                        <QueryTrace log={log} />
                       </td>
                     </tr>
                   )}

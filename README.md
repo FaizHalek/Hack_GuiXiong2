@@ -9,8 +9,8 @@ A prototype that lets authorised users ask questions across a company's library 
 | Part | Stack | Folder |
 |---|---|---|
 | Web app | React 19, Vite, Tailwind, TanStack Query, react-pdf | [frontend/](frontend/) |
-| API | FastAPI on Vercel (Python), pypdf, DeepSeek API (OpenAI SDK), Voyage AI | [backend/](backend/) |
-| Data | Supabase: Postgres + pgvector + full-text search, Auth, Storage, RLS | [supabase/](supabase/) |
+| API | FastAPI on Vercel (Python), pypdf, DeepSeek API (OpenAI SDK) | [backend/](backend/) |
+| Data | Supabase: Postgres + pgvector + full-text search, Auth, Storage, RLS, Edge Function embeddings (gte-small) | [supabase/](supabase/) |
 | Evaluation | Golden-set runner with an LLM judge | [evals/](evals/) |
 
 ## Setup
@@ -27,6 +27,15 @@ A prototype that lets authorised users ask questions across a company's library 
 
 The migrations create the private `research-pdfs` storage bucket.
 
+5. Deploy the embeddings Edge Function, which runs Supabase's built-in `gte-small` model. Pick a long random string as the shared secret, and put the same value in `EMBED_SECRET` in `backend/.env`:
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref YOUR-PROJECT-REF
+   npx supabase secrets set EMBED_SECRET=your-long-random-string
+   npx supabase functions deploy embed --no-verify-jwt
+   ```
+   `--no-verify-jwt` is needed because the function checks the shared secret instead of a user token, so only the backend can call it.
+
 ### 2. Backend
 
 ```bash
@@ -34,7 +43,7 @@ cd backend
 python -m venv .venv
 .venv/Scripts/activate        # Windows; use `source .venv/bin/activate` elsewhere
 pip install -r requirements-dev.txt
-cp .env.example .env          # fill in Supabase, DeepSeek and Voyage keys
+cp .env.example .env          # fill in Supabase keys, DeepSeek key and EMBED_SECRET
 uvicorn app.main:app --reload --port 8000
 ```
 

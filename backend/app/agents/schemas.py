@@ -39,6 +39,7 @@ class Source(BaseModel):
     printed_label: str | None = None
     content: str
     score: float = 0.0
+    matched: str | None = None  # the chunk that matched the search (content holds the whole page)
 
     def public(self, snippet: str | None = None) -> dict:
         return {
@@ -49,6 +50,19 @@ class Source(BaseModel):
             "page_index": self.page_index,
             "printed_label": self.printed_label,
             "snippet": snippet or self.content[:300],
+        }
+
+    def trace(self, cited: bool) -> dict:
+        """What retrieval returned for this source, for the admin Insights view."""
+        return {
+            "id": self.id,
+            "document_id": self.document_id,
+            "document_title": self.document_title,
+            "page_index": self.page_index,
+            "printed_label": self.printed_label,
+            "score": round(self.score, 4),
+            "matched": (self.matched or self.content)[:600],
+            "cited": cited,
         }
 
 

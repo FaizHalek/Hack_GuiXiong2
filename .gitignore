@@ -21,3 +21,6 @@ supabase/.branches/
 
 # Eval output
 evals/reports/
+
+# Sample PDFs for local testing
+test_data/

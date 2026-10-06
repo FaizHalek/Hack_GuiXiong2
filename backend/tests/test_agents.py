@@ -3,7 +3,7 @@ import pytest
 from app.agents import pipeline
 from app.agents.citations import cited_ids, format_sources, resolve
 from app.agents.evaluator import passes, verdict
-from app.agents.retrieve import diversify, fts_text
+from app.agents.retrieve import cap_per_document, fts_text, rank_pages
 from app.agents.schemas import ClaimCheck, Evaluation, QueryPlan, Source
 from app.deps import CurrentUser, authorised_labels
 
@@ -46,15 +46,35 @@ def test_fts_text_ors_keywords_and_quotes_phrases():
     assert fts_text([], "fallback") == "fallback"
 
 
-def test_diversify_caps_per_page_and_document():
-    rows = (
-        [{"document_id": "a", "page_index": 1}] * 3
-        + [{"document_id": "a", "page_index": 2}] * 3
-        + [{"document_id": "b", "page_index": 1}]
-    )
-    picked = diversify(rows, limit=10, per_page=2, per_doc=3)
-    assert sum(r["document_id"] == "a" for r in picked) == 3
-    assert sum(r["document_id"] == "b" for r in picked) == 1
+def hit(doc, page, chunk, score):
+    return {
+        "document_id": doc,
+        "page_index": page,
+        "chunk_id": chunk,
+        "content": chunk,
+        "score": score,
+        "page_text": f"{doc}-{page}",
+    }
+
+
+def test_rank_pages_rolls_chunks_up_to_pages():
+    q1 = [hit("a", 1, "a1x", 0.5), hit("a", 1, "a1y", 0.9), hit("a", 2, "a2", 0.7)]
+    q2 = [hit("a", 2, "a2", 0.6), hit("b", 1, "b1", 0.2)]
+    pages = rank_pages([q1, q2])
+
+    # one row per page; a page found by both sub-queries outranks a single strong hit
+    assert [(p["document_id"], p["page_index"]) for p in pages] == [("a", 2), ("a", 1), ("b", 1)]
+    assert pages[0]["score"] == pytest.approx(1.3)
+    # a page's score uses its best chunk per query, not the sum of all its chunks
+    assert pages[1]["score"] == pytest.approx(0.9)
+    assert pages[1]["chunk_id"] == "a1y"
+
+
+def test_cap_per_document():
+    pages = [{"document_id": "a"}] * 5 + [{"document_id": "b"}]
+    picked = cap_per_document(pages, limit=10, per_doc=3)
+    assert sum(p["document_id"] == "a" for p in picked) == 3
+    assert sum(p["document_id"] == "b" for p in picked) == 1
 
 
 # --- access ------------------------------------------------------------------
@@ -117,6 +137,10 @@ def test_pipeline_happy_path(monkeypatch, plan):
     assert final["eval"]["verdict"] == "grounded"
     assert final["regenerated"] is False
 
+    trace = final["trace"]
+    assert [(r["id"], r["cited"]) for r in trace["retrieved"]] == [("S1", True), ("S2", False)]
+    assert trace["first_draft"] is None
+
 
 def test_pipeline_regenerates_once_with_feedback(monkeypatch, plan):
     bad = Evaluation(claims=[claim("unsupported", ids=("S2",))], grounded_score=0.2, summary="S2 doesn't say that")
@@ -129,6 +153,11 @@ def test_pipeline_regenerates_once_with_feedback(monkeypatch, plan):
     assert feedback_seen == [None, bad]
     assert events[-1]["answer"] == "Right [S1]."
     assert events[-1]["regenerated"] is True
+
+    draft = events[-1]["trace"]["first_draft"]
+    assert draft["answer"] == "Wrong [S2]."
+    assert draft["eval"]["verdict"] == "low_confidence"
+    assert draft["eval"]["summary"] == "S2 doesn't say that"
 
 
 def test_pipeline_flags_low_confidence_after_second_failure(monkeypatch, plan):

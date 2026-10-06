@@ -39,7 +39,7 @@ insert into public.pages (id, document_id, page_index, printed_label, text, char
 
 -- Embeddings: one-hot-ish vectors so similarity ordering is predictable.
 create function pg_temp.vec(hot int) returns extensions.vector language sql as $$
-  select (array_fill(0.0::real, array[hot - 1]) || 1.0::real || array_fill(0.0::real, array[1024 - hot]))::extensions.vector
+  select (array_fill(0.0::real, array[hot - 1]) || 1.0::real || array_fill(0.0::real, array[384 - hot]))::extensions.vector
 $$;
 
 insert into public.chunks (document_id, page_id, page_index, content, embedding) values
@@ -81,6 +81,10 @@ select pg_temp.assert(
 select pg_temp.assert(
   (select printed_label from match_chunks(pg_temp.vec(1), 'revenue', array['10000000-0000-0000-0000-000000000001']::uuid[], 10) limit 1) = 'i',
   'match_chunks returns the printed page label for display');
+select pg_temp.assert(
+  (select page_text from match_chunks(pg_temp.vec(1), 'revenue', array['10000000-0000-0000-0000-000000000001']::uuid[], 10) limit 1)
+    = 'Acme revenue grew 12 percent',
+  'match_chunks returns the full page text for the answer agent');
 select pg_temp.assert(
   (select page_index from match_chunks(pg_temp.vec(1), 'margins', array['10000000-0000-0000-0000-000000000001']::uuid[], 10)
    order by score desc limit 1) in (1, 2),

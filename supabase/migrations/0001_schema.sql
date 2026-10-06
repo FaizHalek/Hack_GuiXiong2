@@ -32,6 +32,11 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- Users who signed up before this migration ran (e.g. after a reset) get a profile too.
+insert into public.profiles (id, email)
+select id, coalesce(email, '') from auth.users
+on conflict (id) do nothing;
+
 create table public.labels (
   id           uuid primary key default gen_random_uuid(),
   name         text not null unique,
@@ -91,7 +96,7 @@ create table public.chunks (
   page_index   int not null,
   chunk_index  int not null default 0,
   content      text not null,
-  embedding    extensions.vector(1024),
+  embedding    extensions.vector(384),  -- gte-small (Supabase built-in)
   fts          tsvector generated always as (to_tsvector('english', content)) stored,
   unique (document_id, page_index, chunk_index)
 );

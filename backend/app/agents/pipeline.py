@@ -65,7 +65,15 @@ def run(db: Client, question: str, label_ids: list[str], history: list[dict]) ->
     started = time.monotonic()
     usage = Usage()
 
-    def final(answer: str, citations: list[dict], eval_: dict, sources: list[Source], regenerated: bool = False) -> dict:
+    def final(
+        answer: str,
+        citations: list[dict],
+        eval_: dict,
+        sources: list[Source],
+        regenerated: bool = False,
+        first_draft: dict | None = None,
+    ) -> dict:
+        cited = {c["id"] for c in citations}
         return {
             "type": "final",
             "answer": answer,
@@ -76,6 +84,11 @@ def run(db: Client, question: str, label_ids: list[str], history: list[dict]) ->
             "retrieved_chunk_ids": [s.chunk_id for s in sources],
             "latency_ms": int((time.monotonic() - started) * 1000),
             "usage": {"input_tokens": usage.input_tokens, "output_tokens": usage.output_tokens},
+            # Stored in query_logs for the admin Insights view; not sent to the browser.
+            "trace": {
+                "retrieved": [s.trace(cited=s.id in cited) for s in sources],
+                "first_draft": first_draft,
+            },
         }
 
     plan = query_agent.plan_query(question, history, usage)
@@ -104,8 +117,10 @@ def run(db: Client, question: str, label_ids: list[str], history: list[dict]) ->
     evaluation = _safe_evaluate(plan.standalone_question, answer, sources, usage)
 
     regenerated = False
+    first_draft = None
     if evaluation is not None and not evaluator.passes(evaluation):
         regenerated = True
+        first_draft = {"answer": answer, "eval": _eval_payload(evaluation)}
         yield {"type": "regenerate", "reason": evaluation.summary}
         answer = ""
         for text in answer_agent.stream_answer(plan.standalone_question, sources, feedback=evaluation, usage=usage):
@@ -114,4 +129,4 @@ def run(db: Client, question: str, label_ids: list[str], history: list[dict]) ->
         yield {"type": "evaluating"}
         evaluation = _safe_evaluate(plan.standalone_question, answer, sources, usage)
 
-    yield final(answer, _citations(answer, sources, evaluation), _eval_payload(evaluation), sources, regenerated)
+    yield final(answer, _citations(answer, sources, evaluation), _eval_payload(evaluation), sources, regenerated, first_draft)
