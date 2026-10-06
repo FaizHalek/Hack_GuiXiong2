@@ -5,10 +5,10 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 const variants: Record<ButtonVariant, string> = {
-  primary: 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-300',
-  secondary: 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 disabled:text-slate-400',
+  primary: 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-300 dark:hover:bg-indigo-500',
+  secondary: 'bg-surface text-slate-700 border border-slate-300 hover:bg-slate-50 disabled:text-slate-400',
   ghost: 'text-slate-600 hover:bg-slate-100 disabled:text-slate-300',
-  danger: 'bg-white text-red-600 border border-red-200 hover:bg-red-50 disabled:text-red-300',
+  danger: 'bg-surface text-red-600 border border-red-200 hover:bg-red-50 disabled:text-red-300',
 }
 
 export function Button({
@@ -38,7 +38,7 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
   return (
     <input
       className={clsx(
-        'w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm shadow-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100',
+        'w-full rounded-md border border-slate-300 bg-surface px-3 py-1.5 text-sm shadow-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100',
         className,
       )}
       {...props}
@@ -47,7 +47,7 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
 }
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={clsx('rounded-lg border border-slate-200 bg-white', className)}>{children}</div>
+  return <div className={clsx('rounded-lg border border-slate-200 bg-surface', className)}>{children}</div>
 }
 
 export function Spinner({ className }: { className?: string }) {

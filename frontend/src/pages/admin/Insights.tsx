@@ -76,7 +76,7 @@ export function Insights() {
                 onClick={() => setVerdict(f.value)}
                 className={clsx(
                   'rounded-full px-2.5 py-0.5 text-xs font-medium',
-                  verdict === f.value ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600',
+                  verdict === f.value ? 'bg-slate-800 text-white dark:bg-indigo-600' : 'bg-slate-100 text-slate-600',
                 )}
               >
                 {f.label}

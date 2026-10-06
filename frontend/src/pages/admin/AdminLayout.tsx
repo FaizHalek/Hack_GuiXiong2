@@ -23,7 +23,7 @@ export function AdminLayout() {
                 className={({ isActive }) =>
                   clsx(
                     'rounded-md px-3 py-1 text-sm font-medium',
-                    isActive ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900',
+                    isActive ? 'bg-surface text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900',
                   )
                 }
               >

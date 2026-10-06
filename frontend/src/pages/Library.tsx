@@ -43,7 +43,7 @@ export function Library() {
             </div>
             <button
               onClick={() => setLabelFilter(null)}
-              className={clsx('rounded-full px-2.5 py-1 text-xs font-medium', !labelFilter ? 'bg-slate-800 text-white' : 'bg-slate-100')}
+              className={clsx('rounded-full px-2.5 py-1 text-xs font-medium', !labelFilter ? 'bg-slate-800 text-white dark:bg-indigo-600' : 'bg-slate-100')}
             >
               All
             </button>
@@ -60,7 +60,7 @@ export function Library() {
             <EmptyState title="No reports found">Try another library or search term.</EmptyState>
           )}
 
-          <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+          <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-surface">
             {filtered.map((d) => (
               <li key={d.id}>
                 <button

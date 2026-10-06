@@ -36,7 +36,7 @@ export function LibrarySelector({
             onClick={() => toggle(label.id)}
             className={clsx(
               'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm',
-              on ? 'bg-white shadow-xs ring-1 ring-slate-200' : 'text-slate-600 hover:bg-slate-100',
+              on ? 'bg-surface shadow-xs ring-1 ring-slate-200' : 'text-slate-600 hover:bg-slate-100',
             )}
           >
             <span

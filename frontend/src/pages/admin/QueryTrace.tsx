@@ -113,7 +113,7 @@ function QueryAgentOutput({ log }: { log: QueryLog }) {
         {p.keywords.length ? (
           <div className="flex flex-wrap gap-1">
             {p.keywords.map((k) => (
-              <span key={k} className="rounded bg-white px-1.5 py-0.5 font-mono text-xs ring-1 ring-slate-200">
+              <span key={k} className="rounded bg-surface px-1.5 py-0.5 font-mono text-xs ring-1 ring-slate-200">
                 {k}
               </span>
             ))}
@@ -142,7 +142,7 @@ function RetrievalOutput({ log }: { log: QueryLog }) {
       </p>
       <ol className="space-y-2">
         {rows.map((r) => (
-          <li key={r.id} className="rounded-md bg-white p-3 ring-1 ring-slate-200">
+          <li key={r.id} className="rounded-md bg-surface p-3 ring-1 ring-slate-200">
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="rounded bg-indigo-50 px-1.5 py-0.5 font-semibold text-indigo-700">{r.id}</span>
               <span className="font-medium text-slate-700">{r.document_title}</span>

@@ -138,7 +138,7 @@ export function EvalBadge({ result }: { result: EvalResult }) {
         <ChevronDown className={clsx('size-3 transition-transform', open && 'rotate-180')} />
       </button>
       {open && (
-        <div className="mt-2 max-w-xl space-y-1.5 rounded-md border border-slate-200 bg-white p-3 text-slate-600">
+        <div className="mt-2 max-w-xl space-y-1.5 rounded-md border border-slate-200 bg-surface p-3 text-slate-600">
           <p>{result.summary}</p>
           {flagged.length > 0 ? (
             <ul className="space-y-1">

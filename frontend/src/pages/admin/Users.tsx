@@ -74,7 +74,7 @@ export function Users() {
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
-              className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm"
+              className="rounded-md border border-slate-300 bg-surface px-2 py-1.5 text-sm"
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
@@ -118,7 +118,7 @@ export function Users() {
                       value={u.role}
                       disabled={u.id === me?.id}
                       onChange={(e) => changeRole(u, e.target.value as Role)}
-                      className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm disabled:opacity-60"
+                      className="rounded-md border border-slate-300 bg-surface px-2 py-1 text-sm disabled:opacity-60"
                     >
                       <option value="user">User</option>
                       <option value="admin">Admin</option>

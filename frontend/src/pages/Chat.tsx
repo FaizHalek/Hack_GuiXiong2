@@ -173,7 +173,7 @@ export function Chat() {
       <aside className="hidden w-64 shrink-0 flex-col gap-5 overflow-y-auto border-r border-slate-200 bg-slate-50 p-3 md:flex">
         <button
           onClick={newChat}
-          className="flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
+          className="flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-surface px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
         >
           <MessageSquarePlus className="size-4" /> New question
         </button>
@@ -186,7 +186,7 @@ export function Chat() {
               key={c.id}
               className={clsx(
                 'group flex items-center rounded-md text-sm',
-                c.id === conversationId ? 'bg-white ring-1 ring-slate-200' : 'hover:bg-slate-100',
+                c.id === conversationId ? 'bg-surface ring-1 ring-slate-200' : 'hover:bg-slate-100',
               )}
             >
               <button
@@ -228,7 +228,7 @@ export function Chat() {
                       key={q}
                       onClick={() => ask(q)}
                       disabled={selected.length === 0}
-                      className="rounded-lg border border-slate-200 bg-white p-3 text-left text-sm text-slate-600 hover:border-indigo-300 disabled:opacity-50"
+                      className="rounded-lg border border-slate-200 bg-surface p-3 text-left text-sm text-slate-600 hover:border-indigo-300 disabled:opacity-50"
                     >
                       {q}
                     </button>
@@ -252,8 +252,8 @@ export function Chat() {
           </div>
         </div>
 
-        <form onSubmit={submit} className="border-t border-slate-200 bg-white p-3">
-          <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-xl border border-slate-300 bg-white p-2 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100">
+        <form onSubmit={submit} className="border-t border-slate-200 bg-surface p-3">
+          <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-xl border border-slate-300 bg-surface p-2 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
