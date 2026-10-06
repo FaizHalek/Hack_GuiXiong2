@@ -2,6 +2,18 @@
 name = "research-assistant-backend"
 version = "0.1.0"
 requires-python = ">=3.12"
+# Vercel installs from this list (not requirements.txt) when pyproject.toml exists; keep the two in sync.
+dependencies = [
+    "fastapi>=0.115",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+    "openai>=1.50",
+    "httpx>=0.27",
+    "supabase>=2.10",
+    "pypdf>=5.0",
+    "fonttools>=4.50",
+    "PyJWT[crypto]>=2.9",
+]
 
 [tool.ruff]
 line-length = 130
