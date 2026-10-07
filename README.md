@@ -122,13 +122,13 @@ cp .env.example .env          # add your DeepSeek API key; change the demo passw
 uvicorn app.main:app --reload --port 8000
 ```
 
-On first start the backend creates `backend/data/` with the SQLite database, uploaded PDFs and a signing secret. It also seeds four demo collections and two accounts, an admin and an officer, whose credentials are in `backend/.env.example`. To reset the demo, stop the server and delete `backend/data/`. The first indexing run downloads the embedding model (about 70 MB). Set `EMBEDDING_PROVIDER=hash` to run fully offline.
+On first start the backend creates `backend/data/` with the SQLite database, uploaded PDFs and a signing secret. It also seeds one collection per fictional demo agency (six) and two accounts, an admin and an officer, whose credentials are in `backend/.env.example`. To reset the demo, stop the server and delete `backend/data/`. The first indexing run downloads Chroma's embedding model (all-MiniLM-L6-v2, about 80 MB). Set `EMBEDDING_PROVIDER=hash` to run fully offline.
 
 **Frontend**
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local    # VITE_API_URL, defaults to http://localhost:8000
+cp .env.example .env.local    # VITE_API_URL=/api: Vite proxies /api to the backend on :8000
 npm run dev
 ```
 
@@ -138,7 +138,13 @@ Open http://localhost:5173 and sign in as the admin, then:
 3. **Admin → Users**: add officers and choose which collections each can search.
 4. **Ask**: pick collections and ask a question.
 
-**Sample data:** `python scripts/generate_fake_docs.py --out data/fake` generates fictional policies, SOPs, circulars, guidelines, reports and minutes for testing.
+**Sample data:** `data/fake/` holds 121 fictional policies, SOPs, circulars, guidelines, reports and minutes. Load them with `cd backend && .venv/Scripts/python -m app.demo_seed`, which takes about a minute and skips documents already loaded. Regenerate them with `python scripts/generate_fake_docs.py --count 20 --out data/fake --seed 7`.
+
+**Canary document:** named after Van Halen's "no brown M&M's" rider clause. `LAD/CIR/2025/099` is a Land Administration Department circular whose facts (Form LAD-0451, ext. 7731) appear in no other document. Ask "Which form confirms that brown sweets were removed before a contractor briefing?":
+- as the admin, you should get Form LAD-0451 with a citation
+- as the demo officer, who can't search that agency, you should get no answer
+
+If either goes wrong, retrieval or access control is broken. `canary-01` and `canary-02` in `evals/golden_set.example.jsonl` check both.
 
 **Tests**
 ```bash

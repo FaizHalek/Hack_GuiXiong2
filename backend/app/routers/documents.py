@@ -78,8 +78,10 @@ def signed_url(document_id: str, request: Request, user: CurrentUser = Depends(g
     """A short-lived link to the PDF that works without an Authorization header (PDF viewer, new tab)."""
     with connect() as conn:
         doc = get_accessible(conn, user, document_id)
-    url = request.url_for("document_file", document_id=document_id).include_query_params(token=create_file_token(document_id))
-    return {"url": str(url), "title": doc["title"], "page_count": doc["page_count"], "expires_in": FILE_TOKEN_TTL_S}
+    # A path, not an absolute URL: the browser may reach the API through a proxy or tunnel whose
+    # address the backend can't see, so the frontend resolves it against its own API base.
+    path = request.app.url_path_for("document_file", document_id=document_id)
+    return {"url": f"{path}?token={create_file_token(document_id)}", "title": doc["title"], "page_count": doc["page_count"], "expires_in": FILE_TOKEN_TTL_S}
 
 
 @router.get("/{document_id}/file", name="document_file")

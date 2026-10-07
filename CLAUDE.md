@@ -8,7 +8,7 @@ The **Agency Knowledge Assistant** is a hackathon prototype for this problem sta
 
 > Government agencies manage thousands of documents (policies, SOPs, circulars, guidelines, reports, meeting minutes). Turn this organizational knowledge into an intelligent, searchable resource so employees and stakeholders find information faster and make better decisions.
 
-It started as an "AI Research Intelligence Assistant" on Supabase and Vercel. It now runs **entirely locally**: SQLite plus files on disk, a ChromaDB vector index, local accounts and local embeddings. Only the DeepSeek LLM API is remote. Demo content is 120 fictional documents from six fictional agencies in `data/fake/<type>/*.txt`, made by `scripts/generate_fake_docs.py`. The code still uses the old internal names:
+It started as an "AI Research Intelligence Assistant" on Supabase and Vercel. It now runs **entirely locally**: SQLite plus files on disk, a ChromaDB vector index, local accounts and local embeddings. Only the DeepSeek LLM API is remote. Demo content is 121 fictional documents from six fictional agencies in `data/fake/<type>/*.txt`, made by `scripts/generate_fake_docs.py`. The code still uses the old internal names:
 
 | Code name | UI name |
 |---|---|
@@ -68,6 +68,7 @@ Two deployables: a React/Vite SPA (`frontend/`) and a FastAPI API (`backend/`). 
 3. Pages are keyed by **physical** `page_index` (1-based position in the file); `printed_label` is for display only. Every citation, eval and viewer reference uses `page_index`.
 4. Repeated headers and footers are stripped, and each page is split into ~1,000-char overlapping chunks for embedding.
 5. `app/demo_seed.py` feeds the fake .txt documents through the same path: it renders each one to a PDF with reportlab, registers it (type from the folder, reference number, issue date, agency collection) and calls `ingest_batch`. It is idempotent on `reference_no`.
+6. The demo data includes a canary, `LAD/CIR/2025/099` (Form LAD-0451, ext. 7731), defined in `scripts/generate_fake_docs.py` so regenerating keeps it. Admins must retrieve it; the demo officer (no LAD access) must not. It is covered by `test_canary_is_found_by_admins_and_hidden_from_officers` and the `canary-*` items in `evals/golden_set.example.jsonl`. Don't reuse its distinctive facts in other documents.
 
 **Embeddings** (`app/llm/embeddings.py`): `EMBEDDING_PROVIDER=chroma` (default: Chroma's `DefaultEmbeddingFunction`, all-MiniLM-L6-v2, 384-dim, downloaded once) or `hash` (offline lexical fallback; the tests use it via the `local_store` fixture, with a real Chroma store in the test's tmp folder). Vectors are computed here and passed to Chroma explicitly; the Chroma collection has no embedding function of its own. Vectors are L2-normalised. Changing the provider needs a re-index.
 
@@ -85,6 +86,6 @@ The Query and Evaluator agents use DeepSeek JSON mode. JSON mode doesn't enforce
 
 - Keep `backend/pyproject.toml` `dependencies` in sync with `requirements.txt`.
 - Ruff line length is 130.
-- Frontend env var: `VITE_API_URL` only. The backend reads `backend/.env` (template in `.env.example`).
+- Frontend env var: `VITE_API_URL`, default `/api`. The Vite dev/preview server proxies `/api` to the backend (`API_PROXY_TARGET`, default `http://localhost:8000`; see `vite.config.ts`), so tunnels and port forwards only need port 5173 and there are no CORS issues. The backend returns PDF links as paths; resolve them with `apiUrl()` from `lib/api.ts`. The backend reads `backend/.env` (template in `.env.example`).
 - The `Input` component always has `w-full`, so a width class passed to it loses; wrap it in a sized `div` instead.
 - Known limits: no OCR (pages without a text layer are flagged, not indexed), and tables and charts are indexed only as raw extracted text. Government archives often include scanned circulars and minutes, so OCR (e.g. AWS Textract) is a likely extension. The default embedding model is English-only.

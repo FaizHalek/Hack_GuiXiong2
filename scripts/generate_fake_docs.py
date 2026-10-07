@@ -46,6 +46,40 @@ TITLES = ["Director", "Deputy Director", "Senior Manager", "Principal Assistant 
 
 TYPES = ["policies", "sops", "circulars", "guidelines", "reports", "meeting_minutes"]
 
+# A "brown M&M's" canary (after Van Halen's tour rider): one fixed document with facts
+# that appear nowhere else (Form LAD-0451, ext. 7731). It is written on every run so
+# --clean never loses it. It belongs to the Land Administration Department, which the
+# demo officer cannot search, so it checks two things:
+#   - an admin asking about it gets Form LAD-0451 cited from LAD/CIR/2025/099 (retrieval works)
+#   - the demo officer asking the same question gets no answer (collection access control works)
+# See the canary-* questions in evals/golden_set.example.jsonl.
+CANARY_NAME = "LAD-CIR-2025-099_meeting_room_confectionery"
+CANARY_TEXT = """LAND ADMINISTRATION DEPARTMENT
+============================================================
+CIRCULAR
+Title: Circular No. 99 of 2025: Confectionery in Meeting Rooms
+Reference No.: LAD/CIR/2025/099
+Date: 01 April 2025
+To: All Heads of Department and Staff
+Classification: Internal
+============================================================
+
+1. PURPOSE
+This circular sets the standard for confectionery provided in meeting rooms for briefings attended by external contractors.
+
+2. REQUIREMENTS
+2.1 A bowl of chocolate-coated sweets must be provided at every briefing attended by external contractors.
+2.2 All brown-coloured sweets must be removed from the bowl before the briefing starts.
+2.3 The Unit Coordinator must confirm compliance on Form LAD-0451 (Confectionery Checklist) and file it within 2 working days.
+
+3. RATIONALE
+Compliance with this circular shows that the full briefing pack, including its safety and site access requirements, has been read in detail.
+
+4. ENQUIRIES
+Enquiries may be directed to the Facilities Unit at ext. 7731.
+
+Issued by: Rina Halim, Principal Assistant Secretary"""
+
 
 def person(rng: random.Random) -> str:
     return f"{rng.choice(FIRST_NAMES)} {rng.choice(LAST_NAMES)}"
@@ -343,6 +377,10 @@ def main() -> None:
             name, text = GENERATORS[kind](rng, n)
             (folder / f"{name}.txt").write_text(text + "\n", encoding="utf-8")
         print(f"{kind:16} {args.count} files -> {folder}")
+
+    canary = args.out / "circulars" / f"{CANARY_NAME}.txt"
+    canary.write_text(CANARY_TEXT + "\n", encoding="utf-8")
+    print(f"{'canary':16} 1 file  -> {canary}")
 
 
 if __name__ == "__main__":

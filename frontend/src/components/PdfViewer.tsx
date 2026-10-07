@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
-import { get } from '../lib/api'
+import { apiUrl, get } from '../lib/api'
 import { escapeHtml, normaliseForMatch, runMatchesEvidence } from '../lib/citations'
 import { Spinner } from './ui'
 
@@ -42,7 +42,10 @@ export default function PdfViewer({ target, onClose }: { target: ViewerTarget; o
 
   const { data, error, isLoading } = useQuery({
     queryKey: ['signed-url', target.documentId],
-    queryFn: () => get<{ url: string; title: string; page_count: number }>(`/documents/${target.documentId}/signed-url`),
+    queryFn: async () => {
+      const res = await get<{ url: string; title: string; page_count: number }>(`/documents/${target.documentId}/signed-url`)
+      return { ...res, url: apiUrl(res.url) }
+    },
     staleTime: 50 * 60_000,
   })
 

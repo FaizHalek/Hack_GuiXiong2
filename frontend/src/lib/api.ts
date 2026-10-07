@@ -2,7 +2,12 @@ import { createSseParser } from './sse'
 import { getToken, setToken } from './session'
 import type { ChatEvent } from './types'
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+// Defaults to /api, which the Vite dev server proxies to the backend (see vite.config.ts). Calling the
+// API on the page's own origin means a tunnel or port-forward only has to expose the frontend.
+const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '')
+
+/** Absolute URL for an API path, e.g. the PDF links the backend returns as paths. */
+export const apiUrl = (path: string) => (/^https?:\/\//.test(path) ? path : `${API_URL}${path}`)
 
 export class ApiError extends Error {
   status: number

@@ -93,3 +93,34 @@ def test_reset_removes_seeded_documents(local_store):
         assert conn.execute("select count(*) from documents").fetchone()[0] == 0
     assert vector_store.count() == 0
     assert not any(local_store.files_dir.iterdir())
+
+
+def test_canary_is_found_by_admins_and_hidden_from_officers(local_store, tmp_path):
+    """The "brown M&M's" canary: a fact only one restricted document holds (see scripts/generate_fake_docs.py)."""
+    data = tmp_path / "fake"
+    (data / "circulars").mkdir(parents=True)
+    canary = demo_seed.DEFAULT_DATA / "circulars" / "LAD-CIR-2025-099_meeting_room_confectionery.txt"
+    (data / "circulars" / canary.name).write_bytes(canary.read_bytes())
+    demo_seed.seed(data, log=lambda *_: None)
+
+    question = "Which form confirms that brown sweets were removed before a contractor briefing?"
+    plan = QueryPlan(needs_retrieval=True, standalone_question=question, sub_queries=[question], keywords=["brown", "sweets"])
+    with connect() as conn:
+        lad = fetch_all(conn, "select id from labels where name = 'Land Administration Department'")[0]["id"]
+
+    sources = retrieve(plan, [lad])
+    assert sources[0].reference_no == "LAD/CIR/2025/099" and "Form LAD-0451" in sources[0].content
+
+    def login(email, password):
+        token = client.post("/auth/login", json={"email": email, "password": password}).json()["access_token"]
+        return {"Authorization": f"Bearer {token}"}
+
+    officer = login(local_store.demo_user_email, local_store.demo_user_password)
+    officer_labels = [label["id"] for label in client.get("/me", headers=officer).json()["labels"]]
+    assert lad not in officer_labels
+    assert retrieve(plan, officer_labels) == []
+    assert client.get("/documents", headers=officer).json() == []
+    assert client.post("/chat", headers=officer, json={"question": question, "label_ids": [lad]}).status_code == 403
+
+    admin = login(local_store.demo_admin_email, local_store.demo_admin_password)
+    assert [d["reference_no"] for d in client.get("/documents", headers=admin).json()] == ["LAD/CIR/2025/099"]

@@ -2,7 +2,7 @@
 
 Government agencies hold thousands of documents: policies, SOPs, circulars, guidelines, reports and meeting minutes. Finding the rule or decision you need usually means searching shared drives and reading PDFs end to end. This prototype lets an authorised officer ask a question across the collections they have access to and get an answer they can verify, with every fact linked to the page it came from.
 
-For the hackathon demo everything runs on one machine: the API, a SQLite database, a ChromaDB vector index, the PDF files and the embedding model. The only external call is to the DeepSeek API for the language models. A set of 120 fictional documents from six fictional agencies (`data/fake/`) can be loaded with `python -m app.demo_seed`, so the demo starts with a realistic archive.
+For the hackathon demo everything runs on one machine: the API, a SQLite database, a ChromaDB vector index, the PDF files and the embedding model. The only external call is to the DeepSeek API for the language models. A set of 121 fictional documents (including one canary) from six fictional agencies (`data/fake/`) can be loaded with `python -m app.demo_seed`, so the demo starts with a realistic archive.
 
 ## Workflow
 
@@ -102,7 +102,7 @@ DeepSeek's JSON mode guarantees valid JSON but not a particular shape, so the Qu
 3. Ask a question that spans documents, e.g. "What did the ICT Committee decide about remote work, and is there a guideline on it?" Show citations from both the minutes and the guideline, with their dates.
 4. Ask something the collections don't cover and show the assistant saying so instead of making something up.
 5. Open an answer's evaluator badge to show the claim-by-claim check.
-6. **Admin → Users**: limit an officer to one collection. Sign in as that officer and show the other collection's documents are gone from search and from the Documents page.
+6. **Admin → Users**: limit an officer to one collection. Sign in as that officer and show the other collection's documents are gone from search and from the Documents page. The canary circular makes this quick: as admin, "Which form confirms that brown sweets were removed before a contractor briefing?" returns Form LAD-0451; as the demo officer, the same question returns nothing.
 7. **Admin → Insights**: show groundedness, feedback and knowledge gaps as evidence for rolling it out.
 
 **Value evidence to collect during a pilot:**
