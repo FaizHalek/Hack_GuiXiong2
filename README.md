@@ -1,47 +1,130 @@
 # Agency Knowledge Assistant
 
-A prototype that turns a government agency's documents (policies, SOPs, circulars, guidelines, reports and meeting minutes) into a searchable knowledge base. Officers ask questions in plain language and get answers that cite the document and page each fact came from. Clicking a citation opens the PDF at that page with the supporting text highlighted.
+**Ask a question, get an answer you can verify, with every fact linked to the exact page of the policy, SOP, circular or minutes it came from.**
 
-- Problem statement: [docs/problem-overview.md](docs/problem-overview.md)
-- Solution outline: [docs/solution_v1.md](docs/solution_v1.md)
-- Architecture, evaluation and demo script: [docs/architecture.md](docs/architecture.md)
+| Team member | Student ID |
+|---|---|
+| Muhammad Faiz Bin Halek | 104384313 |
+| Aniq Nazhan Bin Mazlan | 104384915 |
 
-| Part | Stack | Folder |
-|---|---|---|
-| Web app | React 19, Vite, Tailwind, TanStack Query, react-pdf | [frontend/](frontend/) |
-| API | FastAPI (Python), pypdf, DeepSeek API (OpenAI SDK) | [backend/](backend/) |
-| Data | Local storage: SQLite (tables + FTS5 keyword search), PDFs on disk, local embeddings (fastembed, bge-small) | `backend/data/` (created on first run) |
-| Evaluation | Golden-set runner with an LLM judge | [evals/](evals/) |
+---
 
-Everything runs on one machine for the hackathon demo. No cloud database or storage account is needed; the only external service is the DeepSeek API for the language models.
+## The problem
 
-## Setup
+Government agencies hold thousands of documents: policies, SOPs, circulars, guidelines, reports and meeting minutes. Finding the right rule or decision usually means searching shared drives by file name and reading PDFs end to end. Answers come slowly, and officers risk acting on a circular that has since been replaced. That slows decisions and costs productivity across the agency.
 
-### 1. Backend
+## Our solution
 
+Agency Knowledge Assistant turns an agency's document archive into a searchable knowledge base that officers can question in plain language.
+
+- **Ask, don't search.** *"What is the approval process for a purchase above RM50,000?"* returns a direct answer drawn from the agency's own documents, not from the internet.
+- **Every fact is cited.** Each sentence carries a citation chip. Clicking it opens the original PDF at the cited page, with the supporting text highlighted.
+- **Answers are checked before officers rely on them.** A second AI agent checks every claim against its source. Unsupported answers are rewritten once, and if they still fail they're shown with a *Low confidence* badge instead of being presented as fact.
+- **The right people see the right documents.** Documents are grouped into collections (by agency, department or topic). Each officer can search only the collections they've been granted.
+- **It knows what it doesn't know.** If no document covers a question, the assistant says so instead of guessing. Admins see these questions as *knowledge gaps*, which point to missing or outdated documents.
+
+## Screenshots
+
+### Ask
+Officers pick the collections to search and ask in plain language. Suggested questions show what the assistant can do.
+
+![Ask page with collection selector and suggested questions](docs/screenshots/ask.png)
+
+### Document library
+Browse every policy, SOP, circular, guideline, report and set of minutes the officer has access to. Filter by type, collection, title or reference number, newest issue first.
+
+![Document library with type and collection filters](docs/screenshots/documents.png)
+
+### Administration and insights
+Admins manage documents, collections and users. The Insights view tracks documents indexed, questions asked, average groundedness, knowledge gaps and how helpful officers rated the answers.
+
+![Admin insights dashboard](docs/screenshots/admin-insights.png)
+
+## How it works
+
+```
+Admin uploads PDFs (type, issue date, collections)
+        │
+        ▼
+Ingestion: extract text page by page ─► remove repeated headers/footers ─► chunk ─► embed ─► index
+        │
+Officer picks collections and asks a question
+        │
+        ▼
+Query Agent ─► hybrid search (meaning + keywords, limited to the officer's collections)
+        │
+        ▼
+Answer Agent (streams answer, cites [S1], [S2] …) ─► Evaluator Agent (checks every claim)
+        ▲                                                   │
+        └──────── one rewrite if any claim is unsupported ──┘
+        │
+        ▼
+Answer with citation chips ─► click ─► PDF opens at the cited page, evidence highlighted
+```
+
+**Three cooperating AI agents**
+1. **Query Agent:** rewrites follow-up questions so they stand alone, splits comparative questions ("how did the 2022 and 2024 circulars differ?") into sub-queries, and extracts keywords such as reference numbers, form numbers and acronyms.
+2. **Answer Agent:** sees only the retrieved pages and must cite every factual sentence. Each excerpt arrives with its document type, reference number and issue date, and the agent flags when a later circular revises an earlier rule.
+3. **Evaluator Agent:** gives each claim a verdict (supported, partial or unsupported), checks that its citation is correct, and extracts the verbatim evidence quote that the PDF viewer highlights.
+
+**Retrieval built for government documents**
+- **Hybrid search** combines meaning-based search (vector embeddings) with exact keyword search (BM25). A question in everyday words still finds the right policy, and an exact reference like *"Form DFT-512"* still matches.
+- **Reliable page references:** pages are numbered by their physical position in the file, not by the printed number (which is often roman or restarts in each section), so a citation always opens the right page.
+- **Whole-page context:** search matches small chunks, but the Answer Agent reads the full page, so answers aren't built from fragments.
+
+**Access control**
+- Accounts are created by admins only; there is no self sign-up. Passwords are hashed with scrypt, and logins use signed tokens.
+- Every API route filters by the officer's granted collections. A question about a collection the officer isn't granted returns nothing.
+- PDFs are never served publicly. Each one is opened through a short-lived signed link, issued only after the officer's access is checked.
+
+## Technology
+
+| Layer | Choice |
+|---|---|
+| Web app | React 19, Vite, Tailwind CSS, TanStack Query, react-pdf (text layer for evidence highlighting) |
+| API | FastAPI (Python), pypdf, answers streamed over Server-Sent Events |
+| Language models | DeepSeek API: `deepseek-v4-pro` for answers, `deepseek-flash` for query planning and evaluation |
+| Embeddings | fastembed with `BAAI/bge-small-en-v1.5`, running locally on CPU |
+| Data | SQLite with FTS5 keyword search; PDFs stored on local disk |
+
+For the hackathon, everything runs on one machine. The only external call is to the language model API.
+
+## Measuring quality
+
+- **Live, on every answer:** the evaluator's verdict and grounded score are stored, and officers rate answers with thumbs up or down. All of this feeds the Insights dashboard.
+- **Offline benchmark:** [evals/run_eval.py](evals/run_eval.py) runs a golden set of expert-written questions. It measures retrieval Recall@10 and MRR, citation accuracy, faithfulness, correctness, refusal accuracy on unanswerable questions, latency and token cost. Targets: Recall@10 ≥ 0.85, citation accuracy ≥ 0.9, refusal accuracy ≥ 0.9.
+- **Value in a pilot:** time 5–10 real tasks two ways, with the assistant and by searching the shared drive manually, and compare.
+
+## Path to production on AWS
+
+| Prototype | Production on AWS |
+|---|---|
+| PDFs on local disk | Amazon S3 |
+| SQLite + in-memory vector search | Amazon Aurora PostgreSQL with pgvector, or Amazon OpenSearch |
+| Text-layer PDFs only | Amazon Textract for scanned circulars, tables and forms |
+| Batched ingestion via the API | SQS queue with background workers |
+| Local accounts | Amazon Cognito with SSO to the agency directory |
+| — | Audit logging of document access, document versioning (marking superseded circulars), retention and classification controls, multilingual (Malay) embeddings |
+
+More detail: [docs/architecture.md](docs/architecture.md) · Problem statement: [docs/problem-overview.md](docs/problem-overview.md)
+
+---
+
+## Running the demo
+
+**Backend** (Python 3.12+)
 ```bash
 cd backend
 python -m venv .venv
 .venv/Scripts/activate        # Windows; use `source .venv/bin/activate` elsewhere
 pip install -r requirements-dev.txt
-cp .env.example .env          # add your DeepSeek key; change the demo passwords
+cp .env.example .env          # add your DeepSeek API key; change the demo passwords
 uvicorn app.main:app --reload --port 8000
 ```
 
-On first start the backend creates `backend/data/`:
+On first start the backend creates `backend/data/` with the SQLite database, uploaded PDFs and a signing secret. It also seeds four demo collections and two accounts, an admin and an officer, whose credentials are in `backend/.env.example`. To reset the demo, stop the server and delete `backend/data/`. The first indexing run downloads the embedding model (about 70 MB). Set `EMBEDDING_PROVIDER=hash` to run fully offline.
 
-| Path | Contents |
-|---|---|
-| `data/app.db` | SQLite database: users, collections, documents, pages, chunks (with embeddings), FTS index, conversations, query logs |
-| `data/files/<document-id>/` | the uploaded PDFs |
-| `data/.secret` | the key that signs login tokens and PDF links (only when `APP_SECRET` is empty) |
-
-It also seeds four demo collections and two accounts, an admin and an officer. Their emails and passwords are in `backend/.env.example`. Change them in `.env` before the first start, or delete `data/app.db` to re-seed. To reset the demo completely, stop the server and delete `backend/data/`.
-
-The first indexing run downloads the embedding model (about 70 MB) and caches it. To run fully offline, set `EMBEDDING_PROVIDER=hash` (lexical-only vectors; keyword search still works). Changing the provider or model means re-indexing every document.
-
-### 2. Frontend
-
+**Frontend**
 ```bash
 cd frontend
 npm install
@@ -49,19 +132,16 @@ cp .env.example .env.local    # VITE_API_URL, defaults to http://localhost:8000
 npm run dev
 ```
 
-Open http://localhost:5173, sign in as the admin, then:
+Open http://localhost:5173 and sign in as the admin, then:
+1. **Admin → Collections**: use the seeded collections or create your own.
+2. **Admin → Documents**: upload PDFs with their type, issue date and collections, and wait for indexing to finish.
+3. **Admin → Users**: add officers and choose which collections each can search.
+4. **Ask**: pick collections and ask a question.
 
-1. **Admin → Collections**: create a collection per agency, department or document group (or use the seeded ones).
-2. **Admin → Documents**: pick a document type, an issue date and the collections, upload PDFs, and wait for indexing to finish. Use the pencil icon to fix titles, types, reference numbers and dates.
-3. **Admin → Users**: add officers with a temporary password and choose which collections each can search.
-4. **Documents**: browse by type and collection, newest first.
-5. **Ask**: pick collections and ask a question.
+**Sample data:** `python scripts/generate_fake_docs.py --out data/fake` generates fictional policies, SOPs, circulars, guidelines, reports and minutes for testing.
 
-## Tests
-
+**Tests**
 ```bash
-cd backend && pytest -q                 # extraction, chunking, citations, agent pipeline, local store + access control
-cd frontend && npm test                 # citation parsing, evidence highlighting, SSE parser
+cd backend && pytest -q       # extraction, chunking, citations, agent pipeline, access control
+cd frontend && npm test       # citation parsing, evidence highlighting, streaming parser
 ```
-
-Answer quality is measured separately with the golden-set evaluation; see [evals/README.md](evals/README.md).
