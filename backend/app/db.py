@@ -88,8 +88,7 @@ create table if not exists chunks (
   page_id      text not null references pages (id) on delete cascade,
   page_index   integer not null,
   chunk_index  integer not null default 0,
-  content      text not null,
-  embedding    blob,  -- float32, L2-normalised
+  content      text not null,  -- its vector lives in the Chroma collection under the same id (app/vectors.py)
   unique (document_id, page_index, chunk_index)
 );
 create index if not exists chunks_document_idx on chunks (document_id);
@@ -153,14 +152,23 @@ create table if not exists query_logs (
 create index if not exists query_logs_created_idx on query_logs (created_at desc);
 """
 
-# Demo collections created on first start. A collection is an agency, a
-# department or any other group of documents that access is granted to.
-SEED_LABELS = [
-    ("Human Resources", "Leave, conduct, training and staff welfare policies", "#2563eb"),
-    ("Finance & Procurement", "Financial procedures, procurement circulars and audit reports", "#16a34a"),
-    ("Digital & ICT", "IT security policies, system SOPs and digital service guidelines", "#7c3aed"),
-    ("Corporate Governance", "Management meeting minutes, governance guidelines and annual reports", "#d97706"),
+# Demo collections created on first start: the fictional agencies of the fake
+# documents in data/fake (see scripts/generate_fake_docs.py). A collection can be
+# an agency, a department or any other group of documents that access is granted to.
+# (code, name, colour); the code is the first part of each document's reference number.
+SEED_COLLECTIONS = [
+    ("DDS", "Department of Digital Services", "#7c3aed"),
+    ("DFT", "Department of Finance and Treasury", "#2563eb"),
+    ("DHW", "Department of Health and Wellbeing", "#16a34a"),
+    ("LAD", "Land Administration Department", "#0891b2"),
+    ("MEC", "Ministry of Education and Culture", "#db2777"),
+    ("MPW", "Ministry of Public Works", "#d97706"),
 ]
+DEMO_OFFICER_COLLECTIONS = ("DHW", "DDS")
+
+
+def collection_description(code: str, name: str) -> str:
+    return f"Policies, SOPs, circulars, guidelines, reports and minutes of the {name} ({code})"
 
 
 def now() -> str:
@@ -242,13 +250,13 @@ def _init_db(db_path: Path) -> None:  # cached per database file, so it runs onc
         if conn.execute("select count(*) from users").fetchone()[0] == 0:
             stamp = now()
             label_ids = {}
-            for name, description, color in SEED_LABELS:
+            for code, name, color in SEED_COLLECTIONS:
                 existing = conn.execute("select id from labels where name = ?", (name,)).fetchone()
-                label_ids[name] = existing[0] if existing else new_id()
+                label_ids[code] = existing[0] if existing else new_id()
                 if not existing:
                     conn.execute(
                         "insert into labels (id, name, description, color, created_at) values (?, ?, ?, ?, ?)",
-                        (label_ids[name], name, description, color, stamp),
+                        (label_ids[code], name, collection_description(code, name), color, stamp),
                     )
             admin_id, user_id = new_id(), new_id()
             conn.executemany(
@@ -260,7 +268,7 @@ def _init_db(db_path: Path) -> None:  # cached per database file, so it runs onc
             )
             conn.executemany(
                 "insert into user_label_grants (user_id, label_id) values (?, ?)",
-                [(user_id, label_ids["Human Resources"]), (user_id, label_ids["Corporate Governance"])],
+                [(user_id, label_ids[code]) for code in DEMO_OFFICER_COLLECTIONS],
             )
         conn.commit()
     finally:

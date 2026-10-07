@@ -14,18 +14,18 @@
 
 ## Building the golden set
 
-Copy `golden_set.example.jsonl` to `golden_set.jsonl` and replace the examples with 30–50 questions written with a domain expert against the demo collections. Each line holds one question:
+The examples in `golden_set.example.jsonl` are written against the fake demo documents (load them with `python -m app.demo_seed`), so they run as-is. Copy it to `golden_set.jsonl` and extend it with 30–50 questions written with a domain expert against the demo collections. Each line holds one question:
 
 ```json
-{"id": "comp-01", "type": "comparative", "labels": ["Human Resources"],
- "question": "How did the leave carry-forward rule change between the 2022 and 2024 circulars?",
- "expected": [{"document": "Annual Leave Circular 2022", "page": 2}, {"document": "Annual Leave Circular 2024", "page": 2}],
+{"id": "comp-01", "type": "comparative", "labels": ["Department of Health and Wellbeing", "Department of Digital Services"],
+ "question": "How do the two departments' SOPs for data classification differ in turnaround time?",
+ "expected": [{"document": "DHW/SOP/2023/007", "page": 1}, {"document": "DDS/SOP/2022/005", "page": 1}],
  "reference_answer": "..."}
 ```
 
 - `type` is one of `single_fact`, `synthesis`, `comparative` or `unanswerable`. Cover all four types.
 - `labels` names the collections to search, by name or id.
-- In `expected`, `page` is the **physical** page number in the PDF file (the number the in-app viewer shows), not the number printed on the page. `document` is the title shown in the app, or the document id.
+- In `expected`, `page` is the **physical** page number in the PDF file (the number the in-app viewer shows), not the number printed on the page. `document` is the reference number, the title shown in the app, or the document id. Prefer reference numbers: generated documents often share a title.
 - Unanswerable questions have `"expected": []` and a reference answer saying the collections don't cover them.
 
 Spot-check about 20 of the judge's citation verdicts by hand before you rely on the numbers.

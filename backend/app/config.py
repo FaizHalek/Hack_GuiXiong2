@@ -40,21 +40,20 @@ class Settings(BaseSettings):
     answer_effort: str = "low"
     evaluator_effort: str = "low"
 
-    # Embeddings, computed locally.
-    # "fastembed" runs an ONNX model on the CPU (downloaded once on first use).
+    # Embeddings, computed locally and stored in a ChromaDB collection under data_dir/chroma.
+    # "chroma" uses ChromaDB's built-in all-MiniLM-L6-v2 (ONNX on the CPU, downloaded once on first use).
     # "hash" is a dependency-free bag-of-words fallback for offline demos and tests.
-    # Changing the provider or model needs a re-index of every document.
-    embedding_provider: str = "fastembed"
-    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    # Changing the provider needs a re-index of every document (each provider has its own collection).
+    embedding_provider: str = "chroma"
     embedding_dim: int = 384
     embed_batch_size: int = 32
 
     # Ingestion
     ingest_batch_pages: int = 25
-    # Small embedding models read at most 512 tokens, so pages are embedded in ~1,800-char pieces.
-    # Retrieval still hands the full page to the model, and citations stay per page.
-    max_chunk_chars: int = 1800
-    chunk_overlap_chars: int = 200
+    # all-MiniLM-L6-v2 reads at most 256 word pieces (~1,000 characters of English), so pages are
+    # embedded in overlapping pieces. Retrieval still hands the full page to the model, and citations stay per page.
+    max_chunk_chars: int = 1000
+    chunk_overlap_chars: int = 150
 
     # Retrieval
     match_count: int = 24  # chunks per sub-query; several chunks can share a page
@@ -77,6 +76,10 @@ class Settings(BaseSettings):
     @property
     def files_dir(self) -> Path:
         return self.data_dir / "files"
+
+    @property
+    def chroma_dir(self) -> Path:
+        return self.data_dir / "chroma"
 
 
 @lru_cache

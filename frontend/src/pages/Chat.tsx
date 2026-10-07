@@ -12,10 +12,10 @@ import { del, get, streamChat } from '../lib/api'
 import type { ChatEvent, ChatMessage, Citation, Conversation } from '../lib/types'
 
 const EXAMPLES = [
-  'What is the approval process for a purchase above RM50,000?',
-  'How many days of annual leave can be carried forward to next year?',
-  'What did the last management meeting decide about remote work?',
-  'Summarise the latest circular on IT security and who it applies to.',
+  'What changed in the latest circular on per diem rates, and which circular does it supersede?',
+  'What are the steps in the SOP for reporting a workplace hazard?',
+  'What did the ICT Committee decide about remote work, and who has to report back?',
+  'How long does it take to process an annual leave application now?',
 ]
 
 export function Chat() {

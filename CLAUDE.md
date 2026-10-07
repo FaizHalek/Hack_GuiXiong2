@@ -8,7 +8,7 @@ The **Agency Knowledge Assistant** is a hackathon prototype for this problem sta
 
 > Government agencies manage thousands of documents (policies, SOPs, circulars, guidelines, reports, meeting minutes). Turn this organizational knowledge into an intelligent, searchable resource so employees and stakeholders find information faster and make better decisions.
 
-It started as an "AI Research Intelligence Assistant" on Supabase and Vercel. It now runs **entirely locally**: SQLite plus files on disk, local accounts and local embeddings. Only the DeepSeek LLM API is remote. The code still uses the old internal names:
+It started as an "AI Research Intelligence Assistant" on Supabase and Vercel. It now runs **entirely locally**: SQLite plus files on disk, a ChromaDB vector index, local accounts and local embeddings. Only the DeepSeek LLM API is remote. Demo content is 120 fictional documents from six fictional agencies in `data/fake/<type>/*.txt`, made by `scripts/generate_fake_docs.py`. The code still uses the old internal names:
 
 | Code name | UI name |
 |---|---|
@@ -35,6 +35,8 @@ npm test           # vitest run; single file: npx vitest run src/lib/citations.t
 npm run build      # tsc -b && vite build (CI runs this, so type errors fail CI)
 ```
 
+Load the demo documents (from `backend/`): `.venv/Scripts/python -m app.demo_seed [--reset] [--limit N]`. `scripts/embed_fake_docs.py` wraps it and adds `--query` for vector-search checks.
+
 Offline evaluation (from `backend/`): `.venv/Scripts/python ../evals/run_eval.py --golden ../evals/golden_set.jsonl [--limit 5 --no-judge]`.
 
 CI (`.github/workflows/ci.yml`) runs backend ruff + pytest and frontend lint + test + build.
@@ -44,10 +46,11 @@ CI (`.github/workflows/ci.yml`) runs backend ruff + pytest and frontend lint + t
 Two deployables: a React/Vite SPA (`frontend/`) and a FastAPI API (`backend/`). The LLMs are DeepSeek models called through the OpenAI SDK (`app/llm/deepseek.py`). Each agent's model and thinking effort come from env vars (see `app/config.py`).
 
 **Local storage** (`app/db.py`), all under `DATA_DIR` (default `backend/data/`; relative paths resolve against `backend/`, and so does `.env`):
-- `app.db`: SQLite holding the whole schema (`SCHEMA` in `db.py`, created with `create table if not exists`). JSON columns are stored as text and decoded by `fetch_all`/`fetch_one` (`JSON_COLUMNS`). `chunks.embedding` is a float32 BLOB. `chunks_fts` is an external-content FTS5 table kept in sync by triggers, which also fire on cascade deletes.
+- `app.db`: SQLite holding the whole schema (`SCHEMA` in `db.py`, created with `create table if not exists`). JSON columns are stored as text and decoded by `fetch_all`/`fetch_one` (`JSON_COLUMNS`). `chunks_fts` is an external-content FTS5 table kept in sync by triggers, which also fire on cascade deletes.
+- `chroma/`: the ChromaDB vector index (`app/vectors.py`). It holds one vector per chunk under the SQLite chunk id, with `document_id`/`page_index`/`chunk_index` metadata. SQLite cascades do **not** reach Chroma, so code that deletes chunks must also call `vectors.delete_ids`/`delete_document` (ingestion and document delete already do). Search ignores Chroma ids that no longer exist in SQLite. Each embedding provider has its own collection name.
 - `files/<document_id>/<name>.pdf`: uploaded PDFs. Always go through `db.file_path()`, which refuses paths that escape the folder.
 - `.secret`: the auto-generated signing key, when `APP_SECRET` is empty.
-- On first start, `init_db` seeds four demo collections and two demo accounts (credentials in `backend/.env.example`). Use `with connect() as conn:` for every access: it opens a short-lived connection, enables foreign keys, and commits or rolls back.
+- On first start, `init_db` seeds one collection per demo agency (`SEED_COLLECTIONS`, keyed by the agency code that starts each reference number) and two demo accounts (credentials in `backend/.env.example`; the officer gets `DEMO_OFFICER_COLLECTIONS`). Use `with connect() as conn:` for every access: it opens a short-lived connection, enables foreign keys, and commits or rolls back.
 - There are no migrations. A schema change on an existing `app.db` needs an `alter table` step in `init_db`, or the demo data reset (delete `backend/data/`).
 
 **Auth** (`app/auth.py`, `app/deps.py`): scrypt password hashes; HS256 tokens signed with the app secret. `typ: access` tokens are bearer tokens (`POST /auth/login`). `typ: file` tokens are 1-hour links to one PDF (`GET /documents/{id}/signed-url` → `/documents/{id}/file?token=`), so react-pdf can load a PDF without headers. The frontend keeps the token in `localStorage` (`src/lib/session.ts`) and signs out on any 401.
@@ -63,13 +66,14 @@ Two deployables: a React/Vite SPA (`frontend/`) and a FastAPI API (`backend/`). 
 1. Each call processes `INGEST_BATCH_PAGES` pages and returns `next_start`/`done`; the admin UI loops and shows progress.
 2. `start=0` wipes the document's existing pages (chunks and FTS rows cascade). Batches upsert pages and replace each page's chunks, so re-running one is safe.
 3. Pages are keyed by **physical** `page_index` (1-based position in the file); `printed_label` is for display only. Every citation, eval and viewer reference uses `page_index`.
-4. Repeated headers and footers are stripped, and each page is split into ~1,800-char overlapping chunks for embedding.
+4. Repeated headers and footers are stripped, and each page is split into ~1,000-char overlapping chunks for embedding.
+5. `app/demo_seed.py` feeds the fake .txt documents through the same path: it renders each one to a PDF with reportlab, registers it (type from the folder, reference number, issue date, agency collection) and calls `ingest_batch`. It is idempotent on `reference_no`.
 
-**Embeddings** (`app/llm/embeddings.py`): `EMBEDDING_PROVIDER=fastembed` (default, `BAAI/bge-small-en-v1.5`, 384-dim, downloaded once) or `hash` (offline lexical fallback; the tests use it via the `local_store` fixture). Vectors are L2-normalised. Changing provider or model needs a re-index; vectors of the wrong size are skipped at search time.
+**Embeddings** (`app/llm/embeddings.py`): `EMBEDDING_PROVIDER=chroma` (default: Chroma's `DefaultEmbeddingFunction`, all-MiniLM-L6-v2, 384-dim, downloaded once) or `hash` (offline lexical fallback; the tests use it via the `local_store` fixture, with a real Chroma store in the test's tmp folder). Vectors are computed here and passed to Chroma explicitly; the Chroma collection has no embedding function of its own. Vectors are L2-normalised. Changing the provider needs a re-index.
 
 **Question answering** (`app/agents/pipeline.py`, streamed over SSE by `routers/chat.py`):
 1. Query Agent: rewrites the question to stand alone, splits it into up to 3 sub-queries, and extracts keywords.
-2. `retrieve.py`: for each sub-query, it runs a numpy cosine search over the allowed chunks and an FTS5 BM25 search (`fts_text` builds the MATCH expression and quotes every term), then merges them with RRF. Chunk hits are rolled up to pages and capped per page and per document. **Whole pages** go to the Answer Agent as `[S1]…` sources, along with the document type, reference number and issue date.
+2. `retrieve.py`: for each sub-query, it runs a Chroma vector query filtered to the allowed `document_id`s and an FTS5 BM25 search (`fts_text` builds the MATCH expression and quotes every term), then merges them with RRF. Chunk hits are rolled up to pages and capped per page and per document. **Whole pages** go to the Answer Agent as `[S1]…` sources, along with the document type, reference number and issue date.
 3. Answer Agent: streams an answer that cites `[Sn]`.
 4. Evaluator Agent: checks each claim against its cited page. If the answer fails `evaluator.passes` (any unsupported claim, or grounded score < `min_grounded_score`), it is regenerated **once** with the evaluator's feedback.
 5. The SSE event types (`plan`, `sources`, `delta`, `evaluating`, `regenerate`, `final`) are a contract with `frontend/src/lib/sse.ts` and `pages/Chat.tsx`. `final.trace` goes to `query_logs` for the admin Query Trace and Insights views and is not sent to the browser.

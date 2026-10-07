@@ -2,7 +2,7 @@
 
 Government agencies hold thousands of documents: policies, SOPs, circulars, guidelines, reports and meeting minutes. Finding the rule or decision you need usually means searching shared drives and reading PDFs end to end. This prototype lets an authorised officer ask a question across the collections they have access to and get an answer they can verify, with every fact linked to the page it came from.
 
-For the hackathon demo everything runs on one machine: the API, a SQLite database, the PDF files and the embedding model. The only external call is to the DeepSeek API for the language models.
+For the hackathon demo everything runs on one machine: the API, a SQLite database, a ChromaDB vector index, the PDF files and the embedding model. The only external call is to the DeepSeek API for the language models. A set of 120 fictional documents from six fictional agencies (`data/fake/`) can be loaded with `python -m app.demo_seed`, so the demo starts with a realistic archive.
 
 ## Workflow
 
@@ -10,7 +10,7 @@ For the hackathon demo everything runs on one machine: the API, a SQLite databas
 Admin uploads PDFs (type, issue date, collections) ──► FastAPI saves the file to backend/data/files/
         │
         ▼
-Batched ingestion: pypdf page by page ─► clean text ─► ~1,800-char chunks per page ─► local embeddings (fastembed) ─► SQLite (+ FTS5)
+Batched ingestion: pypdf page by page ─► clean text ─► ~1,000-char chunks per page ─► SQLite (+ FTS5) and ChromaDB (all-MiniLM-L6-v2 vectors)
         │
 Officer picks collections and asks a question
         │
@@ -49,9 +49,9 @@ Answer with citation chips ─► click ─► PDF viewer opens the cited page a
 - **Batched processing**: the API processes 25 pages per request and the admin UI keeps calling until the document is finished. This drives the progress bar, and a failed document can resume where it stopped.
 - **Page numbering**: each page is stored with its **physical position in the file** (`page_index`), which every reference uses. The number printed on the page is kept only for display.
 - **Text cleanup**: headers and footers that repeat on more than half the pages (e.g. "HUMAN RESOURCES DIVISION – CIRCULAR 3/2024") are removed, and words split by a hyphen at a line break are rejoined.
-- **Chunking**: the embedding model reads at most 512 tokens, so each page is split into overlapping pieces of about 1,800 characters. Search matches on the pieces, then rolls the hits up to pages: a page scores its best piece for each sub-query, and results are capped at 4 pages per document. The Answer Agent receives the **whole page**, and every citation resolves to exactly one page.
+- **Chunking**: the embedding model reads at most 256 word pieces, so each page is split into overlapping pieces of about 1,000 characters. Search matches on the pieces, then rolls the hits up to pages: a page scores its best piece for each sub-query, and results are capped at 4 pages per document. The Answer Agent receives the **whole page**, and every citation resolves to exactly one page.
 - **Search** (`backend/app/agents/retrieve.py`): for each sub-query it runs:
-  - a vector search: cosine similarity over 384-dimension `bge-small-en-v1.5` embeddings, computed in numpy over the chunks of the allowed documents
+  - a vector search: a ChromaDB query (cosine distance, 384-dimension all-MiniLM-L6-v2 embeddings), filtered to the chunks of the allowed documents through the `document_id` metadata
   - a keyword search: SQLite FTS5 with BM25 ranking and Porter stemming
 
   The two rankings are merged with Reciprocal Rank Fusion. Only documents that have finished indexing and belong to one of the requested collections are searched.
@@ -75,8 +75,8 @@ Answer with citation chips ─► click ─► PDF viewer opens the cited page a
 | Frontend | React + Vite + Tailwind, react-pdf, TanStack Query | Fast to build; react-pdf gives a text layer for highlighting |
 | API | FastAPI (Python) | pypdf and the OpenAI SDK are Python; streams answers over SSE |
 | LLMs | DeepSeek API: `deepseek-v4-pro` (answers), `deepseek-flash` (query planning, evaluator) | OpenAI-compatible and low cost; models and thinking effort are set per agent in env vars |
-| Embeddings | fastembed (ONNX on CPU), `BAAI/bge-small-en-v1.5`, 384-dim | Runs locally with no extra vendor or key; `EMBEDDING_PROVIDER=hash` gives an offline fallback |
-| Data | SQLite with FTS5, PDFs on the local disk | No setup and one folder to back up or reset (`backend/data/`); enough for a demo-scale archive |
+| Embeddings | ChromaDB's built-in all-MiniLM-L6-v2 (ONNX on CPU), 384-dim | Runs locally with no extra vendor or key; `EMBEDDING_PROVIDER=hash` gives an offline fallback |
+| Data | SQLite with FTS5 (text, metadata, keyword search, access rules), ChromaDB (vectors), PDFs on the local disk | No setup and one folder to back up or reset (`backend/data/`); Chroma's HNSW index keeps vector search fast as the archive grows |
 
 DeepSeek's JSON mode guarantees valid JSON but not a particular shape, so the Query and Evaluator agents put the expected schema in the prompt, validate the reply with pydantic, and retry once with the validation error if it doesn't fit.
 
@@ -97,9 +97,9 @@ DeepSeek's JSON mode guarantees valid JSON but not a particular shape, so the Qu
 
 ## Demo script (about 10 minutes)
 
-1. **Admin → Collections**: show one collection per department. **Admin → Documents**: upload a circular and a set of meeting minutes, set their type and issue date, and watch them index page by page.
-2. **Ask**: ask a procedural question, e.g. "How many days of annual leave can be carried forward?" Click the citation and show the PDF opening on the right page with the evidence highlighted.
-3. Ask a question that spans documents, e.g. "What did management decide about remote work, and has HR issued the circular yet?" Show citations from both the minutes and the circular, with their dates.
+1. Before the demo, load the fictional archive: `python -m app.demo_seed`. **Admin → Collections**: show one collection per agency. **Admin → Documents**: upload one more PDF, set its type and issue date, and watch it index page by page.
+2. **Ask**: ask "What changed in the latest circular on per diem rates, and which circular does it supersede?" Click the citation and show the PDF opening on the right page with the evidence highlighted.
+3. Ask a question that spans documents, e.g. "What did the ICT Committee decide about remote work, and is there a guideline on it?" Show citations from both the minutes and the guideline, with their dates.
 4. Ask something the collections don't cover and show the assistant saying so instead of making something up.
 5. Open an answer's evaluator badge to show the claim-by-claim check.
 6. **Admin → Users**: limit an officer to one collection. Sign in as that officer and show the other collection's documents are gone from search and from the Documents page.
@@ -115,8 +115,9 @@ DeepSeek's JSON mode guarantees valid JSON but not a particular shape, so the Qu
 Known limits of the prototype:
 - Scanned circulars and minutes need OCR. Pages without a text layer are flagged but not indexed.
 - Tables and charts are indexed only as whatever text pypdf extracts from them.
-- Local storage is a single SQLite file on one machine. The vector search scans every allowed chunk, which is fine for thousands of pages but not millions.
-- The default embedding model is English-only; Malay documents need a multilingual model (e.g. `intfloat/multilingual-e5-small` via `EMBEDDING_MODEL`).
+- Local storage is a single SQLite file and a Chroma folder on one machine, with no replication or backups.
+- The demo documents are generated from templates, so many share wording; questions should name a topic, agency or reference number to get a precise answer.
+- The default embedding model is English-only; Malay documents need a multilingual embedding function (Chroma supports others, e.g. sentence-transformers models).
 - Admins can read every answer, so they can review quality in the Insights view.
 
 What a production build on AWS would add:

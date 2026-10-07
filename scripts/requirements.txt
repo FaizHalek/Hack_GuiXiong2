@@ -1,1 +1,1 @@
-chromadb>=1.0
+-r ../backend/requirements.txt  # embed_fake_docs.py runs on the backend (chromadb is a backend dependency)

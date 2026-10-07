@@ -17,8 +17,8 @@ Usage (from the backend directory, with backend/.env filled in):
 
 Each golden line is JSON:
   {"id": "q1", "question": "...", "type": "single_fact|synthesis|comparative|unanswerable",
-   "labels": ["Human Resources"],                 # collection names or ids to search
-   "expected": [{"document": "Annual Leave Circular 2024", "page": 2}],  # title or id
+   "labels": ["Department of Health and Wellbeing"],  # collection names or ids to search
+   "expected": [{"document": "DHW/CIR/2024/012", "page": 1}],  # reference no., title or id
    "reference_answer": "..."}
 """
 
@@ -97,11 +97,12 @@ def resolve_labels(names_or_ids: list[str]) -> list[str]:
 
 
 def document_lookup() -> dict[str, str]:
-    """Map lower-cased titles and ids to document ids."""
+    """Map lower-cased titles, reference numbers and ids to document ids (reference numbers are unique; titles may not be)."""
     with connect() as conn:
-        docs = fetch_all(conn, "select id, title from documents")
+        docs = fetch_all(conn, "select id, title, reference_no from documents")
     lookup = {d["id"]: d["id"] for d in docs}
     lookup.update({d["title"].lower(): d["id"] for d in docs})
+    lookup.update({d["reference_no"].lower(): d["id"] for d in docs if d["reference_no"]})
     return lookup
 
 

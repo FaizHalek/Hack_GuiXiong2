@@ -41,12 +41,23 @@ def test_unknown_provider_is_rejected(monkeypatch):
         embeddings.embed(["x"])
 
 
-def test_fastembed_dimension_mismatch_is_reported(monkeypatch):
-    class FakeModel:
-        def embed(self, texts, batch_size):
-            return [[1.0, 0.0] for _ in texts]
-
-    monkeypatch.setattr(get_settings(), "embedding_provider", "fastembed")
-    monkeypatch.setattr(embeddings, "_fastembed_model", lambda name: FakeModel())
+def test_chroma_dimension_mismatch_is_reported(monkeypatch):
+    monkeypatch.setattr(get_settings(), "embedding_provider", "chroma")
+    monkeypatch.setattr(embeddings, "_chroma_function", lambda: lambda texts: [[1.0, 0.0] for _ in texts])
     with pytest.raises(embeddings.EmbeddingError, match="EMBEDDING_DIM"):
         embeddings.embed(["x"])
+
+
+def test_chroma_vectors_are_batched_and_normalised(monkeypatch):
+    calls = []
+
+    def fake(texts):
+        calls.append(len(texts))
+        return [[3.0, 4.0] + [0.0] * 382 for _ in texts]
+
+    monkeypatch.setattr(get_settings(), "embedding_provider", "chroma")
+    monkeypatch.setattr(get_settings(), "embed_batch_size", 2)
+    monkeypatch.setattr(embeddings, "_chroma_function", lambda: fake)
+    vectors = embeddings.embed(["a", "b", "c"])
+    assert calls == [2, 1]
+    assert vectors[0][:2] == pytest.approx([0.6, 0.8])

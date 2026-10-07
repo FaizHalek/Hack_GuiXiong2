@@ -1,11 +1,11 @@
 """Hybrid retrieval over the caller's authorised collections.
 
-Each sub-query runs a vector search (cosine similarity over locally stored
-embeddings) and a keyword search (SQLite FTS5, BM25), fused with Reciprocal
-Rank Fusion. Only documents that are ready and carry one of `label_ids` are
+Each sub-query runs a vector search (cosine similarity in the local ChromaDB
+collection, app/vectors.py) and a keyword search (SQLite FTS5, BM25), fused with
+Reciprocal Rank Fusion. Only documents that are ready and carry one of `label_ids` are
 searched; the caller must pass labels already checked by `authorised_labels`.
 
-Chunks are small (the embedding model reads 512 tokens), so results are rolled
+Chunks are small (the embedding model reads ~256 word pieces), so results are rolled
 up to pages: a page scores its best chunk per sub-query, summed across
 sub-queries, and the Answer Agent receives the whole page text. A per-document
 cap keeps one document from crowding out the rest.
@@ -15,8 +15,7 @@ import re
 import sqlite3
 from collections import defaultdict
 
-import numpy as np
-
+from app import vectors as vector_store
 from app.agents.schemas import QueryPlan, Source
 from app.config import get_settings
 from app.db import connect, fetch_all, placeholders
@@ -78,31 +77,6 @@ def rrf(rankings: list[list[str]], k: int) -> dict[str, float]:
     return scores
 
 
-class _Index:
-    """The embeddings of every searchable chunk, loaded once per question."""
-
-    def __init__(self, conn: sqlite3.Connection, doc_ids: list[str]):
-        rows = conn.execute(
-            f"select id, embedding from chunks where embedding is not null and document_id in ({placeholders(doc_ids)})",
-            doc_ids,
-        ).fetchall()
-        dim = get_settings().embedding_dim
-        valid = [r for r in rows if len(r["embedding"]) == dim * 4]  # skips vectors from a different model
-        self.ids = [r["id"] for r in valid]
-        self.matrix = (
-            np.frombuffer(b"".join(r["embedding"] for r in valid), dtype=np.float32).reshape(len(valid), dim)
-            if valid
-            else np.zeros((0, dim), dtype=np.float32)
-        )
-
-    def nearest(self, vector: list[float], n: int) -> list[str]:
-        if not self.ids:
-            return []
-        scores = self.matrix @ np.asarray(vector, dtype=np.float32)
-        top = np.argsort(-scores)[:n]
-        return [self.ids[i] for i in top]
-
-
 def _keyword_search(conn: sqlite3.Connection, query: str, doc_ids: list[str], n: int) -> list[str]:
     if not query:
         return []
@@ -147,12 +121,14 @@ def search(conn: sqlite3.Connection, queries: list[str], vectors: list[list[floa
     ]
     if not doc_ids:
         return [[] for _ in queries]
-    index = _Index(conn, doc_ids)
     depth = s.match_count * 4
     results = []
     for query, vector in zip(queries, vectors, strict=True):
         scores = rrf(
-            [index.nearest(vector, depth), _keyword_search(conn, keyword_query or fts_text([], query), doc_ids, depth)],
+            [
+                vector_store.nearest(vector, doc_ids, depth),
+                _keyword_search(conn, keyword_query or fts_text([], query), doc_ids, depth),
+            ],
             s.rrf_k,
         )
         results.append(_chunk_rows(conn, scores, s.match_count))

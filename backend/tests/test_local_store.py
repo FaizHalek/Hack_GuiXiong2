@@ -7,6 +7,7 @@ so every rule is exercised here as a request from an admin or a regular user.
 import pytest
 from fastapi.testclient import TestClient
 
+from app import vectors as vector_store
 from app.agents import pipeline
 from app.agents.retrieve import retrieve
 from app.agents.schemas import QueryPlan
@@ -58,6 +59,11 @@ def ingest_all(headers, document_id: str) -> None:
         start = r.json()["next_start"]
 
 
+HEALTH = "Department of Health and Wellbeing"
+DIGITAL = "Department of Digital Services"
+FINANCE = "Department of Finance and Treasury"
+WORKS = "Ministry of Public Works"
+
 LEAVE_PDF = make_pdf(
     [
         ["Circular on annual leave", "Officers are entitled to 25 days of annual leave per year."],
@@ -78,18 +84,18 @@ def test_login_rejects_wrong_password(local_store):
 
 def test_seeded_accounts_and_collections(admin, officer):
     me = client.get("/me", headers=admin).json()
-    assert me["role"] == "admin" and len(me["labels"]) == 4
+    assert me["role"] == "admin" and len(me["labels"]) == 6
     me = client.get("/me", headers=officer).json()
     assert me["role"] == "user"
-    assert sorted(label["name"] for label in me["labels"]) == ["Corporate Governance", "Human Resources"]
+    assert sorted(label["name"] for label in me["labels"]) == [DIGITAL, HEALTH]
 
 
 def test_upload_ingest_and_access_control(admin, officer):
     labels = labels_by_name(admin)
-    leave = upload(admin, LEAVE_PDF, "Leave Circular", [labels["Human Resources"]], doc_type="circular", issued_on="2024-03-01")
-    proc = upload(admin, PROCUREMENT_PDF, "Procurement SOP", [labels["Finance & Procurement"]], doc_type="sop")
+    leave = upload(admin, LEAVE_PDF, "Leave Circular", [labels[HEALTH]], doc_type="circular", issued_on="2024-03-01")
+    proc = upload(admin, PROCUREMENT_PDF, "Procurement SOP", [labels[FINANCE]], doc_type="sop")
     assert leave["doc_type"] == "circular" and leave["issued_on"] == "2024-03-01"
-    assert leave["label_ids"] == [labels["Human Resources"]]
+    assert leave["label_ids"] == [labels[HEALTH]]
 
     # not ready yet: hidden from users
     assert client.get("/documents", headers=officer).json() == []
@@ -117,27 +123,27 @@ def test_upload_ingest_and_access_control(admin, officer):
 
 def test_hybrid_search_respects_labels(admin):
     labels = labels_by_name(admin)
-    leave = upload(admin, LEAVE_PDF, "Leave Circular", [labels["Human Resources"]])
-    proc = upload(admin, PROCUREMENT_PDF, "Procurement SOP", [labels["Finance & Procurement"]])
+    leave = upload(admin, LEAVE_PDF, "Leave Circular", [labels[HEALTH]])
+    proc = upload(admin, PROCUREMENT_PDF, "Procurement SOP", [labels[FINANCE]])
     ingest_all(admin, leave["id"])
     ingest_all(admin, proc["id"])
 
     plan = QueryPlan(
         needs_retrieval=True, standalone_question="How much leave can be carried forward?", sub_queries=["carry forward leave"]
     )
-    sources = retrieve(plan, [labels["Human Resources"]])
+    sources = retrieve(plan, [labels[HEALTH]])
     assert sources and sources[0].document_title == "Leave Circular" and sources[0].page_index == 2
     assert all(s.document_id == leave["id"] for s in sources)
 
     # the procurement document only appears when its collection is searched
     plan = QueryPlan(needs_retrieval=True, standalone_question="quotation committee", sub_queries=["quotation committee"])
-    assert retrieve(plan, [labels["Human Resources"]])[0].document_id != proc["id"]
-    assert retrieve(plan, [labels["Finance & Procurement"]])[0].document_id == proc["id"]
+    assert retrieve(plan, [labels[HEALTH]])[0].document_id != proc["id"]
+    assert retrieve(plan, [labels[FINANCE]])[0].document_id == proc["id"]
 
 
 def test_reingest_and_delete_keep_search_index_consistent(admin):
     labels = labels_by_name(admin)
-    doc = upload(admin, LEAVE_PDF, "Leave Circular", [labels["Human Resources"]])
+    doc = upload(admin, LEAVE_PDF, "Leave Circular", [labels[HEALTH]])
     ingest_all(admin, doc["id"])
     ingest_all(admin, doc["id"])  # start=0 again replaces pages and chunks
 
@@ -145,11 +151,20 @@ def test_reingest_and_delete_keep_search_index_consistent(admin):
         chunks = conn.execute("select count(*) from chunks").fetchone()[0]
         fts = conn.execute("select count(*) from chunks_fts where chunks_fts match '\"leave\"'").fetchone()[0]
     assert chunks == 2 and fts == 2
+    assert vector_store.count() == 2  # the first run's vectors were replaced, not added to
+
+    # re-running a batch from the middle replaces that page's vectors too
+    client.post(f"/admin/documents/{doc['id']}/ingest?start=1", headers=admin)
+    with connect() as conn:
+        ids = {r[0] for r in conn.execute("select id from chunks")}
+    assert vector_store.count() == 2
+    assert set(vector_store.nearest([1.0] + [0.0] * 383, [doc["id"]], 10)) == ids
 
     assert client.delete(f"/admin/documents/{doc['id']}", headers=admin).status_code == 204
     with connect() as conn:
         assert conn.execute("select count(*) from pages").fetchone()[0] == 0
         assert conn.execute("select count(*) from chunks_fts where chunks_fts match '\"leave\"'").fetchone()[0] == 0
+    assert vector_store.count() == 0
 
 
 def test_rejects_non_pdf_upload(admin):
@@ -163,14 +178,14 @@ def test_user_management(admin):
     r = client.post(
         "/admin/users",
         headers=admin,
-        json={"email": "New.Officer@agency.example", "password": "a-long-password", "label_ids": [labels["Digital & ICT"]]},
+        json={"email": "New.Officer@agency.example", "password": "a-long-password", "label_ids": [labels[WORKS]]},
     )
     assert r.status_code == 201
     duplicate = {"email": "new.officer@agency.example", "password": "x" * 8}
     assert client.post("/admin/users", headers=admin, json=duplicate).status_code == 409
 
     new = login("new.officer@agency.example", "a-long-password")
-    assert [label["name"] for label in client.get("/me", headers=new).json()["labels"]] == ["Digital & ICT"]
+    assert [label["name"] for label in client.get("/me", headers=new).json()["labels"]] == ["Ministry of Public Works"]
     assert client.get("/admin/users", headers=new).status_code == 403
 
     user_id = r.json()["id"]

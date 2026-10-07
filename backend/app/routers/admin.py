@@ -8,6 +8,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field, field_validator
 
+from app import vectors as vector_store
 from app.auth import hash_password
 from app.config import get_settings
 from app.db import DOC_TYPES, connect, fetch_all, fetch_one, file_path, new_id, now, placeholders
@@ -206,6 +207,7 @@ def delete_document(document_id: str, admin: CurrentUser = Depends(require_admin
     with connect() as conn:
         doc = _require_document(conn, document_id)
         conn.execute("delete from documents where id = ?", (document_id,))
+    vector_store.delete_document(document_id)
     _remove_file(doc["storage_path"])
 
 

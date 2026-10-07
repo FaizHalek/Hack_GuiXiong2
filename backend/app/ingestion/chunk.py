@@ -30,7 +30,11 @@ def split_page(text: str, max_chars: int, overlap: int) -> list[str]:
         chunks.append(text[start:end].strip())
         if end >= len(text):
             break
+        # Start the overlap on a word boundary so no chunk begins mid-word.
         start = max(end - overlap, start + 1)
+        if start < end and not text[start - 1].isspace():
+            space = text.find(" ", start, end)
+            start = space + 1 if space != -1 else start
     return [c for c in chunks if c]
 
 

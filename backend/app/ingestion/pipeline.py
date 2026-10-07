@@ -5,8 +5,7 @@ show progress and resume a failed document. The UI calls it in a loop until
 
 from dataclasses import dataclass
 
-import numpy as np
-
+from app import vectors as vector_store
 from app.config import get_settings
 from app.db import connect, fetch_one, file_path, new_id, now
 from app.ingestion.chunk import embedding_text, split_page
@@ -45,6 +44,7 @@ def ingest_batch(document_id: str, start: int) -> BatchResult:
             # Fresh (re-)ingestion: drop previous pages; chunks cascade.
             with connect() as conn:
                 conn.execute("delete from pages where document_id = ?", (document_id,))
+            vector_store.delete_document(document_id)
             _set_status(document_id, status="processing", page_count=page_count, pages_processed=0, error=None)
 
         end = min(start + s.ingest_batch_pages, page_count)
@@ -60,6 +60,7 @@ def ingest_batch(document_id: str, start: int) -> BatchResult:
 
         with connect() as conn:
             page_ids = {}
+            stale_chunk_ids: list[str] = []
             for p in pages:
                 conn.execute(
                     "insert into pages (id, document_id, page_index, printed_label, text, char_count)"
@@ -72,24 +73,21 @@ def ingest_batch(document_id: str, start: int) -> BatchResult:
                     "select id from pages where document_id = ? and page_index = ?", (document_id, p.page_index)
                 ).fetchone()[0]
                 # A re-run batch may produce fewer chunks than before; drop the old ones for this page.
+                stale_chunk_ids += [
+                    r[0] for r in conn.execute("select id from chunks where page_id = ?", (page_ids[p.page_index],))
+                ]
                 conn.execute("delete from chunks where page_id = ?", (page_ids[p.page_index],))
 
+            for r in chunk_rows:
+                r.update(id=new_id(), document_id=document_id, page_id=page_ids[r["page_index"]])
             conn.executemany(
-                "insert into chunks (id, document_id, page_id, page_index, chunk_index, content, embedding)"
-                " values (?, ?, ?, ?, ?, ?, ?)",
-                [
-                    (
-                        new_id(),
-                        document_id,
-                        page_ids[r["page_index"]],
-                        r["page_index"],
-                        r["chunk_index"],
-                        r["content"],
-                        np.asarray(vector, dtype=np.float32).tobytes(),
-                    )
-                    for r, vector in zip(chunk_rows, vectors, strict=True)
-                ],
+                "insert into chunks (id, document_id, page_id, page_index, chunk_index, content)"
+                " values (:id, :document_id, :page_id, :page_index, :chunk_index, :content)",
+                chunk_rows,
             )
+            # Inside the transaction: if the vector store fails, the SQLite rows roll back too.
+            vector_store.delete_ids(stale_chunk_ids)
+            vector_store.upsert(chunk_rows, vectors)
 
         done = end >= page_count
         _set_status(document_id, pages_processed=end, status="ready" if done else "processing")
