@@ -25,3 +25,6 @@ test_data/
 
 # Local storage (SQLite database and uploaded PDFs)
 backend/data/
+
+# Local ChromaDB store built by scripts/embed_fake_docs.py
+data/chroma/

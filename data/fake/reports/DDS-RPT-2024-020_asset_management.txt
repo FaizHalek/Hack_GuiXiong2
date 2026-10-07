@@ -1,0 +1,31 @@
+DEPARTMENT OF DIGITAL SERVICES
+============================================================
+REPORT
+Title: Q1 2024 Performance Report: Asset Management
+Reference No.: DDS/RPT/2024/020
+Date: 15 January 2024
+Prepared by: Victor Chong, Director
+Classification: Internal
+============================================================
+
+1. EXECUTIVE SUMMARY
+In Q1 2024, the department handled 1,832 cases related to asset management, of which 1,645 (90%) were resolved within the service standard.
+
+2. KEY PERFORMANCE INDICATORS
+- Cases received: 1,832
+- Cases resolved: 1,645
+- Average processing time: 5.2 working days
+- Customer satisfaction: 71.1%
+
+3. BUDGET
+- Allocated: RM 2,660,000
+- Spent: RM 2,734,024 (103% utilisation)
+
+4. ISSUES AND RISKS
+- Delays related to asset tagging due to staffing constraints.
+- Delays related to loss reporting due to staffing constraints.
+
+5. RECOMMENDATIONS
+- Digitise remaining manual processes for asset tagging by Q3 2024.
+- Recruit 6 additional officers to reduce backlog.
+- Conduct refresher training for all units.

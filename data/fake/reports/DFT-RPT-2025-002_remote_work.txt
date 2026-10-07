@@ -1,0 +1,31 @@
+DEPARTMENT OF FINANCE AND TREASURY
+============================================================
+REPORT
+Title: Q3 2025 Performance Report: Remote Work
+Reference No.: DFT/RPT/2025/002
+Date: 29 September 2025
+Prepared by: Grace Osman, Senior Manager
+Classification: Internal
+============================================================
+
+1. EXECUTIVE SUMMARY
+In Q3 2025, the department handled 2,855 cases related to remote work, of which 1,954 (68%) were resolved within the service standard.
+
+2. KEY PERFORMANCE INDICATORS
+- Cases received: 2,855
+- Cases resolved: 1,954
+- Average processing time: 10.4 working days
+- Customer satisfaction: 74.2%
+
+3. BUDGET
+- Allocated: RM 13,274,000
+- Spent: RM 11,411,815 (86% utilisation)
+
+4. ISSUES AND RISKS
+- Delays related to equipment due to staffing constraints.
+- Delays related to data security at home due to staffing constraints.
+
+5. RECOMMENDATIONS
+- Digitise remaining manual processes for data security at home by Q4 2025.
+- Recruit 7 additional officers to reduce backlog.
+- Conduct refresher training for all units.

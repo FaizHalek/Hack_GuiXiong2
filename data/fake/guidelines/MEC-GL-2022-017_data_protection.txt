@@ -1,0 +1,37 @@
+MINISTRY OF EDUCATION AND CULTURE
+============================================================
+GUIDELINE
+Title: Guidelines on Data Protection
+Reference No.: MEC/GL/2022/017
+Date: 24 September 2022
+Classification: Internal
+============================================================
+
+INTRODUCTION
+These guidelines provide practical advice to help staff apply the Data Protection Policy. They are advisory and should be read together with the relevant policy and SOPs.
+
+DATA CLASSIFICATION
+- Do: document every decision related to data classification and keep evidence on file.
+- Do: consult your Head of Unit when in doubt about data classification.
+- Don't: bypass the approval workflow, even for urgent cases.
+- Tip: most issues with data classification raised in audits relate to missing records.
+
+ACCESS CONTROL
+- Do: document every decision related to access control and keep evidence on file.
+- Do: consult your Head of Unit when in doubt about access control.
+- Don't: bypass the approval workflow, even for urgent cases.
+- Tip: most issues with access control raised in audits relate to missing records.
+
+RETENTION PERIODS
+- Do: document every decision related to retention periods and keep evidence on file.
+- Do: consult your Head of Unit when in doubt about retention periods.
+- Don't: bypass the approval workflow, even for urgent cases.
+- Tip: most issues with retention periods raised in audits relate to missing records.
+
+FREQUENTLY ASKED QUESTIONS
+Q: Who approves exceptions?
+A: The Deputy Director of the relevant division.
+Q: How long does approval take?
+A: Typically 9 working days.
+
+Contact: Daniel Goh, Policy and Planning Unit

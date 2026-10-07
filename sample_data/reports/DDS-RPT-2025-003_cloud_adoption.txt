@@ -1,0 +1,31 @@
+DEPARTMENT OF DIGITAL SERVICES
+============================================================
+REPORT
+Title: Q2 2025 Performance Report: Cloud Adoption
+Reference No.: DDS/RPT/2025/003
+Date: 26 June 2025
+Prepared by: Grace Lim, Deputy Director
+Classification: Internal
+============================================================
+
+1. EXECUTIVE SUMMARY
+In Q2 2025, the department handled 4,812 cases related to cloud adoption, of which 3,091 (64%) were resolved within the service standard.
+
+2. KEY PERFORMANCE INDICATORS
+- Cases received: 4,812
+- Cases resolved: 3,091
+- Average processing time: 14.1 working days
+- Customer satisfaction: 91.4%
+
+3. BUDGET
+- Allocated: RM 2,900,000
+- Spent: RM 2,385,483 (82% utilisation)
+
+4. ISSUES AND RISKS
+- Delays related to workload classification due to staffing constraints.
+- Delays related to cost monitoring due to staffing constraints.
+
+5. RECOMMENDATIONS
+- Digitise remaining manual processes for cost monitoring by Q4 2025.
+- Recruit 4 additional officers to reduce backlog.
+- Conduct refresher training for all units.

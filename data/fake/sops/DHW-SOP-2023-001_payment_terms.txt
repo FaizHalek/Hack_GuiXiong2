@@ -1,0 +1,36 @@
+DEPARTMENT OF HEALTH AND WELLBEING
+============================================================
+STANDARD OPERATING PROCEDURE
+Title: Standard Operating Procedure for Payment Terms (Procurement)
+Reference No.: DHW/SOP/2023/001
+Date: 01 April 2023
+Related Policy: DHW/POL/2023/009
+Classification: Internal
+============================================================
+
+1. OBJECTIVE
+To describe the step-by-step procedure for payment terms under the Procurement framework.
+
+2. DEFINITIONS
+- Requester: the officer initiating the process.
+- Approver: the officer with delegated authority to approve the request.
+- Unit Coordinator: the officer who maintains records for the unit.
+
+3. PROCEDURE
+Step 1: The Requester completes the relevant form in the internal portal.
+Step 2: The Requester attaches supporting documents and submits the form.
+Step 3: The Unit Coordinator verifies completeness within 1 working days.
+Step 4: The Approver reviews and approves or rejects the request within 5 working days.
+Step 5: If rejected, the Approver records the reason and returns the request to the Requester.
+Step 6: Upon approval, the Unit Coordinator updates the register and notifies the Requester by email.
+Step 7: Records are retained for 3 years in accordance with the Records Management Policy.
+
+4. TURNAROUND TIME
+The end-to-end process shall not exceed 10 working days.
+
+5. FORMS AND TEMPLATES
+- Form DHW-666: Request Form
+- Form DHW-527: Approval Checklist
+
+Prepared by: Nurul Goh, Deputy Director
+Approved by: Aisha Lee, Senior Officer

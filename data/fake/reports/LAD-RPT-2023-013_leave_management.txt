@@ -1,0 +1,31 @@
+LAND ADMINISTRATION DEPARTMENT
+============================================================
+REPORT
+Title: Q4 2023 Performance Report: Leave Management
+Reference No.: LAD/RPT/2023/013
+Date: 19 December 2023
+Prepared by: Rajesh Wong, Director
+Classification: Internal
+============================================================
+
+1. EXECUTIVE SUMMARY
+In Q4 2023, the department handled 4,938 cases related to leave management, of which 3,870 (78%) were resolved within the service standard.
+
+2. KEY PERFORMANCE INDICATORS
+- Cases received: 4,938
+- Cases resolved: 3,870
+- Average processing time: 2.6 working days
+- Customer satisfaction: 80.9%
+
+3. BUDGET
+- Allocated: RM 17,460,000
+- Spent: RM 16,414,380 (94% utilisation)
+
+4. ISSUES AND RISKS
+- Delays related to carry-forward due to staffing constraints.
+- Delays related to medical leave due to staffing constraints.
+
+5. RECOMMENDATIONS
+- Digitise remaining manual processes for medical leave by Q4 2023.
+- Recruit 4 additional officers to reduce backlog.
+- Conduct refresher training for all units.

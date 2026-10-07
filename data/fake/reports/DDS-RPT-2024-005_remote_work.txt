@@ -1,0 +1,31 @@
+DEPARTMENT OF DIGITAL SERVICES
+============================================================
+REPORT
+Title: Q4 2024 Performance Report: Remote Work
+Reference No.: DDS/RPT/2024/005
+Date: 29 October 2024
+Prepared by: Hafiz Pillai, Senior Officer
+Classification: Internal
+============================================================
+
+1. EXECUTIVE SUMMARY
+In Q4 2024, the department handled 3,295 cases related to remote work, of which 2,255 (68%) were resolved within the service standard.
+
+2. KEY PERFORMANCE INDICATORS
+- Cases received: 3,295
+- Cases resolved: 2,255
+- Average processing time: 12.6 working days
+- Customer satisfaction: 70.8%
+
+3. BUDGET
+- Allocated: RM 1,347,000
+- Spent: RM 1,366,184 (101% utilisation)
+
+4. ISSUES AND RISKS
+- Delays related to data security at home due to staffing constraints.
+- Delays related to working hours due to staffing constraints.
+
+5. RECOMMENDATIONS
+- Digitise remaining manual processes for equipment by Q4 2024.
+- Recruit 5 additional officers to reduce backlog.
+- Conduct refresher training for all units.

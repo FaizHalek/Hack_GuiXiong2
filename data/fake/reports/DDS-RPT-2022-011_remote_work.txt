@@ -1,0 +1,31 @@
+DEPARTMENT OF DIGITAL SERVICES
+============================================================
+REPORT
+Title: Q1 2022 Performance Report: Remote Work
+Reference No.: DDS/RPT/2022/011
+Date: 06 January 2022
+Prepared by: James Lee, Deputy Director
+Classification: Internal
+============================================================
+
+1. EXECUTIVE SUMMARY
+In Q1 2022, the department handled 4,845 cases related to remote work, of which 3,633 (75%) were resolved within the service standard.
+
+2. KEY PERFORMANCE INDICATORS
+- Cases received: 4,845
+- Cases resolved: 3,633
+- Average processing time: 7.4 working days
+- Customer satisfaction: 74.0%
+
+3. BUDGET
+- Allocated: RM 10,452,000
+- Spent: RM 5,893,021 (56% utilisation)
+
+4. ISSUES AND RISKS
+- Delays related to equipment due to staffing constraints.
+- Delays related to performance review due to staffing constraints.
+
+5. RECOMMENDATIONS
+- Digitise remaining manual processes for working hours by Q3 2022.
+- Recruit 9 additional officers to reduce backlog.
+- Conduct refresher training for all units.
