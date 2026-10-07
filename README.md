@@ -52,22 +52,41 @@ Agency Knowledge Assistant turns an agency's document archive into a searchable 
 - **The right people see the right documents.** Documents are grouped into collections (by agency, department or topic). Each officer can search only the collections they've been granted.
 - **It knows what it doesn't know.** If no document covers a question, the assistant says so instead of guessing. Admins see these questions as *knowledge gaps*, which point to missing or outdated documents.
 
-## Screenshots
+## Key features
 
-### Ask
-Officers pick the collections to search and ask in plain language. Suggested questions show what the assistant can do.
+### 1. RAG answers with the source document side by side, for human validation
 
-![Ask page with collection selector and suggested questions](docs/screenshots/ask.png)
+The assistant answers from the agency's own documents only (retrieval-augmented generation). Every sentence carries a citation chip such as **S1**. Clicking a chip opens the original PDF **right next to the answer**, at the cited page, with the supporting sentence **highlighted**. An officer can check a claim in one click instead of trusting the AI.
 
-### Document library
-Browse every policy, SOP, circular, guideline, report and set of minutes the officer has access to. Filter by type, collection, title or reference number, newest issue first.
+In the example below, the answer quotes a 2.6-working-day average from source S7. The Q4 2023 Leave Management report is open beside it with that exact line highlighted. The source list underneath shows each document's type, reference number and issue date, so officers can tell a current circular from a superseded one.
 
-![Document library with type and collection filters](docs/screenshots/documents.png)
+![An answer with citation chips on the left and the cited PDF open on the right, with the evidence highlighted](docs/screenshots/rag-side-by-side.png)
 
-### Administration and insights
-Admins manage documents, collections and users. The Insights view tracks documents indexed, questions asked, average groundedness, knowledge gaps and how helpful officers rated the answers.
+### 2. Label-based filtering for more specialised search
 
-![Admin insights dashboard](docs/screenshots/admin-insights.png)
+Documents are tagged with **collections** (labels): an agency, a department or any other group, such as *Department of Health and Wellbeing* or *Ministry of Public Works*. The labels do two jobs:
+
+- **Narrow the search:** on the Ask page, officers tick the collections to search (left sidebar above), so a question about health-department leave rules isn't diluted by other agencies' documents.
+- **Control access:** admins grant each officer specific collections. Search, the document library and PDF links only ever return documents from granted collections, so an officer can't reach another agency's documents even by asking for them.
+
+Admins create collections, tag documents with them and see how many documents and users each one has:
+
+![Admin page listing collections with their document and user counts](docs/screenshots/collection-filtering.png)
+
+### 3. A multi-agent framework that plans, retrieves, answers and fact-checks
+
+Each question passes through three specialised AI agents and a retrieval step, rather than a single prompt:
+
+| Step | What it does |
+|---|---|
+| **Query Agent** | Rewrites the question so it stands alone, splits comparisons into sub-queries, and extracts keywords such as reference and form numbers |
+| **Retrieval (RAG)** | Hybrid search of the document database: meaning (vector embeddings in ChromaDB) plus exact keywords (BM25), limited to the selected collections |
+| **Answer Agent** | Writes the answer from the retrieved pages only, citing a source for every fact |
+| **Evaluator Agent** | Checks every claim against its cited page: supported or not, correct citation or not, plus the verbatim evidence quote. A failing answer is rewritten once; if it still fails it is flagged *Low confidence* |
+
+Admins can open any past question and inspect each agent's work in the Insights view: the Query Agent's plan, the pages Retrieval returned, and the Evaluator Agent's claim-by-claim verdicts. Below, all 10 claims in an SOP answer are supported and correctly cited, with the evidence quoted:
+
+![Insights trace showing the Answer, Query Agent, Retrieval and Evaluator Agent tabs, with the evaluator's claim-by-claim table](docs/screenshots/multi-agent-evaluator.png)
 
 ## How it works
 
