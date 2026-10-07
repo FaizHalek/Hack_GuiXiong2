@@ -1,0 +1,31 @@
+MINISTRY OF PUBLIC WORKS
+============================================================
+REPORT
+Title: Q1 2022 Performance Report: Data Protection
+Reference No.: MPW/RPT/2022/012
+Date: 29 January 2022
+Prepared by: Daniel Osman, Deputy Director
+Classification: Internal
+============================================================
+
+1. EXECUTIVE SUMMARY
+In Q1 2022, the department handled 2,195 cases related to data protection, of which 2,041 (93%) were resolved within the service standard.
+
+2. KEY PERFORMANCE INDICATORS
+- Cases received: 2,195
+- Cases resolved: 2,041
+- Average processing time: 13.3 working days
+- Customer satisfaction: 88.5%
+
+3. BUDGET
+- Allocated: RM 5,392,000
+- Spent: RM 4,154,599 (77% utilisation)
+
+4. ISSUES AND RISKS
+- Delays related to breach reporting due to staffing constraints.
+- Delays related to retention periods due to staffing constraints.
+
+5. RECOMMENDATIONS
+- Digitise remaining manual processes for data classification by Q3 2022.
+- Recruit 2 additional officers to reduce backlog.
+- Conduct refresher training for all units.

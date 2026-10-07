@@ -1,0 +1,36 @@
+DEPARTMENT OF DIGITAL SERVICES
+============================================================
+STANDARD OPERATING PROCEDURE
+Title: Standard Operating Procedure for Medical Leave (Leave Management)
+Reference No.: DDS/SOP/2024/011
+Date: 29 September 2024
+Related Policy: DDS/POL/2023/001
+Classification: Internal
+============================================================
+
+1. OBJECTIVE
+To describe the step-by-step procedure for medical leave under the Leave Management framework.
+
+2. DEFINITIONS
+- Requester: the officer initiating the process.
+- Approver: the officer with delegated authority to approve the request.
+- Unit Coordinator: the officer who maintains records for the unit.
+
+3. PROCEDURE
+Step 1: The Requester completes the relevant form in the internal portal.
+Step 2: The Requester attaches supporting documents and submits the form.
+Step 3: The Unit Coordinator verifies completeness within 2 working days.
+Step 4: The Approver reviews and approves or rejects the request within 2 working days.
+Step 5: If rejected, the Approver records the reason and returns the request to the Requester.
+Step 6: Upon approval, the Unit Coordinator updates the register and notifies the Requester by email.
+Step 7: Records are retained for 7 years in accordance with the Records Management Policy.
+
+4. TURNAROUND TIME
+The end-to-end process shall not exceed 13 working days.
+
+5. FORMS AND TEMPLATES
+- Form DDS-648: Request Form
+- Form DDS-194: Approval Checklist
+
+Prepared by: Lina Lee, Director
+Approved by: Victor Pillai, Principal Assistant Secretary

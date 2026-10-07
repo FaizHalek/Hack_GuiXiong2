@@ -1,0 +1,31 @@
+DEPARTMENT OF DIGITAL SERVICES
+============================================================
+REPORT
+Title: Q1 2022 Performance Report: Leave Management
+Reference No.: DDS/RPT/2022/017
+Date: 01 February 2022
+Prepared by: Rajesh Wong, Senior Officer
+Classification: Internal
+============================================================
+
+1. EXECUTIVE SUMMARY
+In Q1 2022, the department handled 1,590 cases related to leave management, of which 1,220 (77%) were resolved within the service standard.
+
+2. KEY PERFORMANCE INDICATORS
+- Cases received: 1,590
+- Cases resolved: 1,220
+- Average processing time: 13.9 working days
+- Customer satisfaction: 70.8%
+
+3. BUDGET
+- Allocated: RM 8,236,000
+- Spent: RM 8,277,457 (101% utilisation)
+
+4. ISSUES AND RISKS
+- Delays related to carry-forward due to staffing constraints.
+- Delays related to emergency leave due to staffing constraints.
+
+5. RECOMMENDATIONS
+- Digitise remaining manual processes for approval workflow by Q3 2022.
+- Recruit 5 additional officers to reduce backlog.
+- Conduct refresher training for all units.

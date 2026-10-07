@@ -1,0 +1,31 @@
+DEPARTMENT OF DIGITAL SERVICES
+============================================================
+REPORT
+Title: Q1 2022 Performance Report: Procurement
+Reference No.: DDS/RPT/2022/014
+Date: 26 January 2022
+Prepared by: Rajesh Lee, Head of Unit
+Classification: Internal
+============================================================
+
+1. EXECUTIVE SUMMARY
+In Q1 2022, the department handled 4,713 cases related to procurement, of which 4,172 (89%) were resolved within the service standard.
+
+2. KEY PERFORMANCE INDICATORS
+- Cases received: 4,713
+- Cases resolved: 4,172
+- Average processing time: 10.4 working days
+- Customer satisfaction: 84.4%
+
+3. BUDGET
+- Allocated: RM 6,963,000
+- Spent: RM 4,075,861 (59% utilisation)
+
+4. ISSUES AND RISKS
+- Delays related to conflict of interest due to staffing constraints.
+- Delays related to vendor registration due to staffing constraints.
+
+5. RECOMMENDATIONS
+- Digitise remaining manual processes for payment terms by Q3 2022.
+- Recruit 6 additional officers to reduce backlog.
+- Conduct refresher training for all units.

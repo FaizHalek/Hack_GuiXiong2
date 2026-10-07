@@ -1,0 +1,31 @@
+DEPARTMENT OF FINANCE AND TREASURY
+============================================================
+REPORT
+Title: Q4 2022 Performance Report: Data Protection
+Reference No.: DFT/RPT/2022/019
+Date: 24 October 2022
+Prepared by: Mei Ling Nair, Deputy Director
+Classification: Internal
+============================================================
+
+1. EXECUTIVE SUMMARY
+In Q4 2022, the department handled 469 cases related to data protection, of which 287 (61%) were resolved within the service standard.
+
+2. KEY PERFORMANCE INDICATORS
+- Cases received: 469
+- Cases resolved: 287
+- Average processing time: 11.1 working days
+- Customer satisfaction: 65.9%
+
+3. BUDGET
+- Allocated: RM 4,166,000
+- Spent: RM 2,349,653 (56% utilisation)
+
+4. ISSUES AND RISKS
+- Delays related to personal data handling due to staffing constraints.
+- Delays related to data classification due to staffing constraints.
+
+5. RECOMMENDATIONS
+- Digitise remaining manual processes for data classification by Q4 2022.
+- Recruit 2 additional officers to reduce backlog.
+- Conduct refresher training for all units.

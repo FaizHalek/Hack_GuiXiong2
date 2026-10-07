@@ -1,0 +1,37 @@
+DEPARTMENT OF DIGITAL SERVICES
+============================================================
+GUIDELINE
+Title: Guidelines on Cloud Adoption
+Reference No.: DDS/GL/2025/002
+Date: 05 February 2025
+Classification: Internal
+============================================================
+
+INTRODUCTION
+These guidelines provide practical advice to help staff apply the Cloud Adoption Policy. They are advisory and should be read together with the relevant policy and SOPs.
+
+EXIT PLANNING
+- Do: document every decision related to exit planning and keep evidence on file.
+- Do: consult your Head of Unit when in doubt about exit planning.
+- Don't: bypass the approval workflow, even for urgent cases.
+- Tip: most issues with exit planning raised in audits relate to missing records.
+
+COST MONITORING
+- Do: document every decision related to cost monitoring and keep evidence on file.
+- Do: consult your Head of Unit when in doubt about cost monitoring.
+- Don't: bypass the approval workflow, even for urgent cases.
+- Tip: most issues with cost monitoring raised in audits relate to missing records.
+
+APPROVED PROVIDERS
+- Do: document every decision related to approved providers and keep evidence on file.
+- Do: consult your Head of Unit when in doubt about approved providers.
+- Don't: bypass the approval workflow, even for urgent cases.
+- Tip: most issues with approved providers raised in audits relate to missing records.
+
+FREQUENTLY ASKED QUESTIONS
+Q: Who approves exceptions?
+A: The Principal Assistant Secretary of the relevant division.
+Q: How long does approval take?
+A: Typically 4 working days.
+
+Contact: Daniel Lim, Policy and Planning Unit
