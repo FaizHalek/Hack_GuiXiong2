@@ -24,3 +24,6 @@ evals/reports/
 
 # Sample PDFs for local testing
 test_data/
+
+# Local ChromaDB store built by scripts/embed_fake_docs.py
+data/chroma/
