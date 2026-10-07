@@ -46,7 +46,7 @@ export function Labels() {
   }
 
   const remove = async (l: Label) => {
-    if (!confirm(`Delete the “${l.name}” library? Documents stay, but lose this label and users lose access through it.`)) return
+    if (!confirm(`Delete the “${l.name}” collection? Documents stay, but leave this collection and users lose access through it.`)) return
     try {
       await del(`/admin/labels/${l.id}`)
       refresh()
@@ -60,7 +60,9 @@ export function Labels() {
       <Card>
         {labels.isLoading && <Spinner className="mx-auto my-8" />}
         {labels.data?.length === 0 && (
-          <EmptyState title="No libraries yet">Create one per company or research collection, then tag documents with it.</EmptyState>
+          <EmptyState title="No collections yet">
+            Create one per agency, department or document group, then add documents to it and grant users access.
+          </EmptyState>
         )}
         <ul className="divide-y divide-slate-100">
           {labels.data?.map((l) => (
@@ -92,8 +94,8 @@ export function Labels() {
 
       <Card className="h-fit p-4">
         <form onSubmit={submit} className="space-y-3">
-          <h2 className="font-medium">{editing ? 'Edit library' : 'New library'}</h2>
-          <Input required placeholder="Name, e.g. Acme Corp" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+          <h2 className="font-medium">{editing ? 'Edit collection' : 'New collection'}</h2>
+          <Input required placeholder="Name, e.g. Human Resources" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
           <Input
             placeholder="Description (optional)"
             value={draft.description}

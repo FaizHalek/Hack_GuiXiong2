@@ -1,5 +1,5 @@
 import { createSseParser } from './sse'
-import { supabase } from './supabase'
+import { getToken, setToken } from './session'
 import type { ChatEvent } from './types'
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
@@ -12,13 +12,14 @@ export class ApiError extends Error {
   }
 }
 
-async function authHeader(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession()
-  const token = data.session?.access_token
+function authHeader(): Record<string, string> {
+  const token = getToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 async function errorFrom(res: Response): Promise<ApiError> {
+  // An expired or revoked token signs the user out instead of leaving every page in an error state.
+  if (res.status === 401 && getToken()) setToken(null)
   let message = res.statusText
   try {
     const body = await res.json()
@@ -33,8 +34,8 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
-      ...(await authHeader()),
+      ...(init.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+      ...authHeader(),
       ...(init.headers as Record<string, string> | undefined),
     },
   })
@@ -49,6 +50,19 @@ export const post = <T>(path: string, body?: unknown) =>
 export const put = <T>(path: string, body: unknown) => api<T>(path, { method: 'PUT', body: JSON.stringify(body) })
 export const patch = <T>(path: string, body: unknown) => api<T>(path, { method: 'PATCH', body: JSON.stringify(body) })
 export const del = <T>(path: string) => api<T>(path, { method: 'DELETE' })
+/** POST multipart form data (file uploads); the browser sets the boundary header. */
+export const postForm = <T>(path: string, form: FormData) => api<T>(path, { method: 'POST', body: form })
+
+export async function login(email: string, password: string): Promise<void> {
+  const res = await fetch(`${API_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  })
+  if (!res.ok) throw await errorFrom(res)
+  const { access_token } = (await res.json()) as { access_token: string }
+  setToken(access_token)
+}
 
 /** POST /chat and invoke `onEvent` for every server-sent event until the stream ends. */
 export async function streamChat(
@@ -58,7 +72,7 @@ export async function streamChat(
 ): Promise<void> {
   const res = await fetch(`${API_URL}/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(body),
     signal,
   })

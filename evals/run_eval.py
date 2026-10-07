@@ -17,8 +17,8 @@ Usage (from the backend directory, with backend/.env filled in):
 
 Each golden line is JSON:
   {"id": "q1", "question": "...", "type": "single_fact|synthesis|comparative|unanswerable",
-   "labels": ["Acme Corp"],                      # library names or ids to search
-   "expected": [{"document": "Acme 2023 Annual Outlook", "page": 12}],  # title or id
+   "labels": ["Human Resources"],                 # collection names or ids to search
+   "expected": [{"document": "Annual Leave Circular 2024", "page": 2}],  # title or id
    "reference_answer": "..."}
 """
 
@@ -40,10 +40,10 @@ from app.agents import pipeline  # noqa: E402
 from app.agents.citations import format_sources  # noqa: E402
 from app.agents.schemas import Source  # noqa: E402
 from app.config import get_settings  # noqa: E402
-from app.db import service_client  # noqa: E402
+from app.db import connect, fetch_all, placeholders  # noqa: E402
 from app.llm import deepseek as llm  # noqa: E402
 
-JUDGE_SYSTEM = """You grade answers produced by a research assistant that answers questions from a company's research reports.
+JUDGE_SYSTEM = """You grade answers produced by a government knowledge assistant that answers questions from an agency's documents (policies, SOPs, circulars, guidelines, reports and meeting minutes).
 
 You receive the question, a reference answer written by a domain expert, the assistant's answer with citations like [S1], and the text of each cited source.
 
@@ -54,7 +54,7 @@ Score:
 - citation_accuracy (0-1): share of citations that point to a source that actually contains the cited claim.
 - refused: true if the answer declines to answer or says the information isn't available.
 
-When the reference answer says the question is unanswerable from the library, a correct answer is a refusal (correctness 5 if refused, 1 if it invents an answer)."""
+When the reference answer says the question is unanswerable from the selected collections, a correct answer is a refusal (correctness 5 if refused, 1 if it invents an answer)."""
 
 
 class Judgement(BaseModel):
@@ -78,8 +78,9 @@ def load_golden(path: Path) -> list[dict]:
     return rows
 
 
-def resolve_labels(db, names_or_ids: list[str]) -> list[str]:
-    labels = db.table("labels").select("id,name").execute().data
+def resolve_labels(names_or_ids: list[str]) -> list[str]:
+    with connect() as conn:
+        labels = fetch_all(conn, "select id, name from labels")
     by_name = {row["name"].lower(): row["id"] for row in labels}
     ids = {row["id"] for row in labels}
     if not names_or_ids:
@@ -91,13 +92,14 @@ def resolve_labels(db, names_or_ids: list[str]) -> list[str]:
         elif value.lower() in by_name:
             out.append(by_name[value.lower()])
         else:
-            raise SystemExit(f"Unknown library label: {value}")
+            raise SystemExit(f"Unknown collection: {value}")
     return out
 
 
-def document_lookup(db) -> dict[str, str]:
+def document_lookup() -> dict[str, str]:
     """Map lower-cased titles and ids to document ids."""
-    docs = db.table("documents").select("id,title").execute().data
+    with connect() as conn:
+        docs = fetch_all(conn, "select id, title from documents")
     lookup = {d["id"]: d["id"] for d in docs}
     lookup.update({d["title"].lower(): d["id"] for d in docs})
     return lookup
@@ -139,12 +141,12 @@ def judge(question: str, reference: str, final: dict, sources: list[Source]) -> 
     )
 
 
-def run_one(db, item: dict, docs: dict[str, str], k: int, use_judge: bool) -> dict:
-    labels = resolve_labels(db, item.get("labels", []))
+def run_one(item: dict, docs: dict[str, str], k: int, use_judge: bool) -> dict:
+    labels = resolve_labels(item.get("labels", []))
     sources: list[Source] = []
     final: dict = {}
     started = time.monotonic()
-    for event in pipeline.run(db, item["question"], labels, []):
+    for event in pipeline.run(item["question"], labels, []):
         if event["type"] == "sources":
             sources = [Source(**{**s, "content": s["snippet"]}) for s in event["sources"]]
         elif event["type"] == "final":
@@ -153,14 +155,13 @@ def run_one(db, item: dict, docs: dict[str, str], k: int, use_judge: bool) -> di
 
     # The sources event carries truncated snippets; fetch the full page text the model saw.
     if sources:
-        rows = (
-            db.table("pages")
-            .select("document_id,page_index,text")
-            .in_("document_id", sorted({s.document_id for s in sources}))
-            .in_("page_index", sorted({s.page_index for s in sources}))
-            .execute()
-            .data
-        )
+        doc_ids = sorted({s.document_id for s in sources})
+        with connect() as conn:
+            rows = fetch_all(
+                conn,
+                f"select document_id, page_index, text from pages where document_id in ({placeholders(doc_ids)})",
+                doc_ids,
+            )
         text = {(r["document_id"], r["page_index"]): r["text"] for r in rows}
         for s in sources:
             s.content = text.get((s.document_id, s.page_index), s.content)
@@ -266,14 +267,13 @@ def main() -> None:
     args = parser.parse_args()
 
     golden = load_golden(args.golden)[: args.limit]
-    db = service_client()  # bypasses RLS; label filtering still comes from each item's "labels"
-    docs = document_lookup(db)
+    docs = document_lookup()  # reads the local store directly; label filtering comes from each item's "labels"
 
     rows = []
     for n, item in enumerate(golden, start=1):
         print(f"[{n}/{len(golden)}] {item['question'][:80]}")
         try:
-            rows.append(run_one(db, item, docs, args.k, not args.no_judge))
+            rows.append(run_one(item, docs, args.k, not args.no_judge))
         except Exception as e:  # keep going; one failure shouldn't sink the run
             print(f"  ! failed: {e}")
             rows.append(

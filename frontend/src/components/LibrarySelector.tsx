@@ -12,7 +12,7 @@ export function LibrarySelector({
   onChange: (ids: string[]) => void
 }) {
   if (labels.length === 0) {
-    return <p className="px-1 text-sm text-slate-500">You haven't been given access to any research libraries yet.</p>
+    return <p className="px-1 text-sm text-slate-500">You haven't been given access to any document collections yet. Ask an administrator.</p>
   }
   const toggle = (id: string) => onChange(selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id])
   const allSelected = selected.length === labels.length
@@ -20,7 +20,7 @@ export function LibrarySelector({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between px-1">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Libraries</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Collections</p>
         <button
           className="text-xs text-indigo-600 hover:underline"
           onClick={() => onChange(allSelected ? [] : labels.map((l) => l.id))}

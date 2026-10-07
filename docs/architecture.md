@@ -1,120 +1,129 @@
 # Architecture and concept
 
-This prototype lets an authorised user ask questions across a selected company's research library and get answers they can verify, so the concept can be tested with customers before anyone commits to an enterprise build. This page explains how it works, how answer quality is measured, and how to demo it.
+Government agencies hold thousands of documents: policies, SOPs, circulars, guidelines, reports and meeting minutes. Finding the rule or decision you need usually means searching shared drives and reading PDFs end to end. This prototype lets an authorised officer ask a question across the collections they have access to and get an answer they can verify, with every fact linked to the page it came from.
+
+For the hackathon demo everything runs on one machine: the API, a SQLite database, the PDF files and the embedding model. The only external call is to the DeepSeek API for the language models.
 
 ## Workflow
 
 ```
-Admin uploads PDFs ──► Supabase Storage (private bucket, signed upload URL)
+Admin uploads PDFs (type, issue date, collections) ──► FastAPI saves the file to backend/data/files/
         │
         ▼
-Batched ingestion (FastAPI): pypdf page-by-page ─► clean text ─► ~1,800-char chunks per page ─► gte-small embeddings (Supabase Edge Function) ─► Postgres
+Batched ingestion: pypdf page by page ─► clean text ─► ~1,800-char chunks per page ─► local embeddings (fastembed) ─► SQLite (+ FTS5)
         │
-User picks libraries and asks a question
+Officer picks collections and asks a question
         │
         ▼
-Query Agent ─► hybrid search (vector + keyword, restricted by RLS) ─► Answer Agent (streams, cites [S1]) ─► Evaluator Agent
-                                                                              ▲                                │
-                                                                              └──── one revision if claims ────┘
-                                                                                     are unsupported
+Query Agent ─► hybrid search (vector + keyword, limited to the officer's collections) ─► Answer Agent (streams, cites [S1]) ─► Evaluator Agent
+                                                                                               ▲                                │
+                                                                                               └──── one revision if claims ────┘
+                                                                                                      are unsupported
         │
         ▼
 Answer with citation chips ─► click ─► PDF viewer opens the cited page and highlights the evidence
 ```
 
-## How each requirement is met
+## How the problem statement is met
 
-### Asking across many reports
-- The user picks one or more **libraries** (labels) and asks in plain language. Follow-up questions keep the conversation's context.
+### Finding information faster
+- Officers ask in plain language ("What is the approval process for a purchase above RM50,000?") instead of guessing file names. Follow-up questions keep the conversation's context.
 - The **Query Agent** (DeepSeek `deepseek-flash`, thinking off for speed) does three things before the search runs:
   - rewrites the question so it stands alone
-  - splits comparative or multi-period questions into up to three sub-queries
-  - extracts keywords for the keyword search
-- Retrieval merges the results of every sub-query. It then caps chunks at 2 per page and 4 per report, so an answer can draw on several reports instead of one.
+  - splits comparative or multi-period questions ("how did the 2022 and 2024 circulars differ?") into up to three sub-queries
+  - extracts keywords such as reference numbers, form numbers and acronyms for the keyword search
+- The **Documents** page lets officers browse by type (policy, SOP, circular, guideline, report, minutes) and collection, newest issue date first.
 
-### Ingestion, indexing and retrieval
-- **Upload path**: the browser uploads each PDF straight to Supabase Storage with a signed URL. The file never passes through Vercel's 4.5 MB request limit.
-- **Batched processing**: FastAPI processes 25 pages per request and the admin UI keeps calling until the document is finished. Each request stays inside Vercel's time limit, and a failed document can resume where it stopped.
-- **Page numbering**: each page is stored with its **physical position in the file** (`page_index`), which is what every reference uses. The number printed on the page is often a roman numeral or restarts in each section, so it is kept only for display.
-- **Text cleanup**: page headers and footers that repeat on more than half the pages are removed, and words split by a hyphen at a line break are joined back together.
-- **Chunking**: the embedding model reads at most 512 tokens, so each page is split into overlapping pieces of about 1,800 characters. Every piece keeps its page number. Search matches on the pieces, then rolls the hits up to pages: a page scores its best piece for each sub-query. The Answer Agent receives the **whole page**, so it isn't working from fragments, and every citation still resolves to exactly one page.
-- **Scanned pages**: pages with no extractable text are flagged in the admin panel as possibly scanned.
-- **Search**: `match_chunks` combines two searches: pgvector (HNSW, cosine similarity on 384-dimension `gte-small` embeddings) and Postgres full-text search. It merges their rankings with Reciprocal Rank Fusion and only returns documents that have finished indexing.
-
-### Answers grounded in the sources
-- The **Answer Agent** (DeepSeek `deepseek-v4-pro`, low thinking effort) sees only the retrieved excerpts, and each excerpt is tagged with its id, report title and page.
-- It is instructed to use nothing else and to cite every factual sentence. If the excerpts don't cover the question, it says so instead of guessing.
-- The **Evaluator Agent** (DeepSeek `deepseek-flash`, low thinking effort) then checks every claim against the page it cites and records three things:
+### Better decisions from current, verifiable answers
+- Every document carries a **type**, an optional **reference number** and an **issue date**. These are passed to the Answer Agent with each excerpt, and it is told to flag when a later circular or policy revises an earlier one, so superseded rules aren't presented as current.
+- The **Answer Agent** (DeepSeek `deepseek-v4-pro`, low thinking effort) sees only the retrieved pages and must cite every factual sentence. If the documents don't cover the question it says so instead of guessing.
+- The **Evaluator Agent** (DeepSeek `deepseek-flash`, low thinking effort) checks every claim against the page it cites and records:
   - a verdict: supported, partial or unsupported
   - whether the citation points to the right source
   - a verbatim evidence quote from that source
 - If any claim is unsupported, or the grounded score is below 0.75, the answer is rewritten **once** using the evaluator's findings and checked again. If it still fails, it's shown with a "Low confidence: verify before use" badge.
+- Each `[S3]` chip opens the PDF at the cited physical page with the evaluator's quote highlighted, so the officer can check the source before acting.
 
-### Citations users can verify
-- Each `[S3]` marker in an answer is a clickable chip showing the report title and page. A source list sits under every answer.
-- Clicking a chip opens the PDF in a side panel at the cited physical page. The evaluator's evidence quote is highlighted on the page's text layer and scrolled into view.
-- When the printed page number differs from the physical one, the viewer shows both, e.g. "Page 12 of 80 · printed as 'x'".
+### Ingestion, indexing and retrieval
+- **Upload**: the browser posts each PDF to `POST /admin/documents` (multipart). The API checks it is a PDF and saves it under `backend/data/files/<document-id>/`.
+- **Batched processing**: the API processes 25 pages per request and the admin UI keeps calling until the document is finished. This drives the progress bar, and a failed document can resume where it stopped.
+- **Page numbering**: each page is stored with its **physical position in the file** (`page_index`), which every reference uses. The number printed on the page is kept only for display.
+- **Text cleanup**: headers and footers that repeat on more than half the pages (e.g. "HUMAN RESOURCES DIVISION – CIRCULAR 3/2024") are removed, and words split by a hyphen at a line break are rejoined.
+- **Chunking**: the embedding model reads at most 512 tokens, so each page is split into overlapping pieces of about 1,800 characters. Search matches on the pieces, then rolls the hits up to pages: a page scores its best piece for each sub-query, and results are capped at 4 pages per document. The Answer Agent receives the **whole page**, and every citation resolves to exactly one page.
+- **Search** (`backend/app/agents/retrieve.py`): for each sub-query it runs:
+  - a vector search: cosine similarity over 384-dimension `bge-small-en-v1.5` embeddings, computed in numpy over the chunks of the allowed documents
+  - a keyword search: SQLite FTS5 with BM25 ranking and Porter stemming
 
-### Restricting access to authorised users and libraries
-- **Sign-in**: Supabase Auth with email and password or a magic link. Accounts are by invitation only.
-- **Roles**: users are either `admin` or `user`. Admins assign each user the libraries they can search.
-- **Enforcement in the database**: Postgres row-level security applies to documents, pages, chunks, labels and conversations. A user only sees documents that carry a library they've been granted. The search function runs with the caller's permissions, so a user who names someone else's library id still gets nothing back. This is covered by `supabase/tests/rls_test.sql`.
-- **Enforcement in the API**: the API checks the requested libraries against the user's grants before it runs any search. It reads the database with the user's own token, so the same RLS policies apply.
-- **PDF access**: PDFs sit in a private bucket. The API issues a short-lived signed URL only after RLS confirms the user can see the document.
+  The two rankings are merged with Reciprocal Rank Fusion. Only documents that have finished indexing and belong to one of the requested collections are searched.
+- **Scanned pages**: pages with no extractable text are flagged in the admin panel as possibly scanned.
+
+### Restricting access to authorised officers and collections
+- **Sign-in**: local accounts. Passwords are hashed with scrypt, and the API issues an HS256 token that the browser keeps in `localStorage`. Admins create accounts and reset passwords; there is no self sign-up.
+- **Roles**: users are `admin` or `user` (officer). Admins grant each officer the collections they can search. A collection can be an agency, a department or any other document group.
+- **Enforcement in the API**: there is no database-level security in SQLite, so every route filters by the caller's grants:
+  - documents, pages and PDF links are only returned for documents that carry one of the officer's collections
+  - the chat route intersects the requested collections with the officer's grants before any search runs
+  - conversations and feedback are owner-only
+
+  These rules are covered by `backend/tests/test_local_store.py`.
+- **PDF access**: PDFs are not served statically. The API issues a short-lived signed link (1 hour) only after confirming the officer can see the document. The link is bound to that one document.
 
 ### Technology stack
 
 | Layer | Choice | Why |
 |---|---|---|
 | Frontend | React + Vite + Tailwind, react-pdf, TanStack Query | Fast to build; react-pdf gives a text layer for highlighting |
-| API | FastAPI on Vercel (Python) | pypdf and the OpenAI SDK are Python; streams answers over SSE |
-| LLMs | DeepSeek API: `deepseek-v4-pro` (answers), `deepseek-flash` (query planning, evaluator) | OpenAI-compatible and low cost; Flash keeps planning and the per-answer check fast and cheap. Models and thinking effort are set per agent in env vars |
-| Embeddings | Supabase built-in `gte-small` (384-dim) via an Edge Function | DeepSeek has no embeddings API. This needs no extra vendor or key. It's English-only and smaller than commercial models; keyword search in the hybrid ranking helps make up for that, and the model can be swapped in `backend/app/llm/embeddings.py` |
-| Data | Supabase Postgres + pgvector + full-text search, Auth, Storage | One managed service for vectors, keyword search, auth, files and row-level security |
+| API | FastAPI (Python) | pypdf and the OpenAI SDK are Python; streams answers over SSE |
+| LLMs | DeepSeek API: `deepseek-v4-pro` (answers), `deepseek-flash` (query planning, evaluator) | OpenAI-compatible and low cost; models and thinking effort are set per agent in env vars |
+| Embeddings | fastembed (ONNX on CPU), `BAAI/bge-small-en-v1.5`, 384-dim | Runs locally with no extra vendor or key; `EMBEDDING_PROVIDER=hash` gives an offline fallback |
+| Data | SQLite with FTS5, PDFs on the local disk | No setup and one folder to back up or reset (`backend/data/`); enough for a demo-scale archive |
 
 DeepSeek's JSON mode guarantees valid JSON but not a particular shape, so the Query and Evaluator agents put the expected schema in the prompt, validate the reply with pydantic, and retry once with the validation error if it doesn't fit.
 
 ## Evaluating quality, relevance and source accuracy
 
-- **Every answer, live**: the Evaluator Agent's verdict and grounded score are stored with the answer. Users rate answers with thumbs up or down. **Admin → Insights** shows the average groundedness, how many answers were revised, the helpful rate, and a filterable log of questions.
-- **Offline**: `evals/run_eval.py` runs a golden set written with a domain expert and measures:
+- **Every answer, live**: the Evaluator Agent's verdict and grounded score are stored with the answer. Officers rate answers with thumbs up or down. **Admin → Insights** shows:
+  - average groundedness and how many answers the evaluator revised
+  - the helpful rate
+  - **knowledge gaps**: questions no document could answer, which point to missing or outdated documents
+  - a filterable question log with the full trace of each answer
+- **Offline**: `evals/run_eval.py` runs a golden set written with subject-matter experts and measures:
   - page-level Recall@10 and MRR
   - judge-scored citation accuracy, faithfulness, correctness and relevance
   - refusal accuracy on unanswerable questions
   - latency and tokens per question
 
   Targets: Recall@10 ≥ 0.85, citation accuracy ≥ 0.9, refusal accuracy ≥ 0.9. See [evals/README.md](../evals/README.md).
-- Run the evaluation before and after every change to prompts, chunking or retrieval settings, and spot-check about 20 of the judge's citation verdicts by hand.
 
 ## Demo script (about 10 minutes)
 
-1. **Admin → Libraries**: show one library per company. **Admin → Documents**: upload a report into one library and watch it index page by page.
-2. **Ask**, with one library selected: ask a single-fact question. Click the citation and show the PDF opening on the right page with the evidence highlighted.
-3. Ask a question that spans reports, e.g. "How did the outlook on margins change between the 2023 and 2024 reports?" Show citations from both reports.
-4. Ask something the library doesn't cover and show the assistant saying so instead of making something up.
+1. **Admin → Collections**: show one collection per department. **Admin → Documents**: upload a circular and a set of meeting minutes, set their type and issue date, and watch them index page by page.
+2. **Ask**: ask a procedural question, e.g. "How many days of annual leave can be carried forward?" Click the citation and show the PDF opening on the right page with the evidence highlighted.
+3. Ask a question that spans documents, e.g. "What did management decide about remote work, and has HR issued the circular yet?" Show citations from both the minutes and the circular, with their dates.
+4. Ask something the collections don't cover and show the assistant saying so instead of making something up.
 5. Open an answer's evaluator badge to show the claim-by-claim check.
-6. **Admin → Users**: limit a user to one library. Sign in as that user and show the other library's reports are gone from search and from the library page.
-7. **Admin → Insights**: show groundedness, feedback and the question log as the evidence base for a go/no-go decision.
+6. **Admin → Users**: limit an officer to one collection. Sign in as that officer and show the other collection's documents are gone from search and from the Documents page.
+7. **Admin → Insights**: show groundedness, feedback and knowledge gaps as evidence for rolling it out.
 
 **Value evidence to collect during a pilot:**
-- Time-to-answer compared with finding the same answer manually in the PDFs. Time 5–10 real tasks both ways.
+- Time-to-answer compared with finding the same answer manually on the shared drive. Time 5–10 real tasks both ways.
 - Golden-set scores against the targets above.
-- Pilot users' thumbs-up rate, and the questions that went unanswered (these show gaps in the library or in retrieval).
+- Pilot officers' thumbs-up rate, and the knowledge gaps.
 
 ## Known limits and the path to production
 
 Known limits of the prototype:
-- Scanned PDFs need OCR. Pages without a text layer are flagged but not indexed.
+- Scanned circulars and minutes need OCR. Pages without a text layer are flagged but not indexed.
 - Tables and charts are indexed only as whatever text pypdf extracts from them.
-- Each ingestion batch downloads the whole PDF again. That's fine for reports of a few hundred pages; a worker queue is better beyond that.
+- Local storage is a single SQLite file on one machine. The vector search scans every allowed chunk, which is fine for thousands of pages but not millions.
+- The default embedding model is English-only; Malay documents need a multilingual model (e.g. `intfloat/multilingual-e5-small` via `EMBEDDING_MODEL`).
 - Admins can read every answer, so they can review quality in the Insights view.
 
-What a production build would add:
-- OCR and layout-aware extraction (tables, figures)
-- a background ingestion queue
-- a re-ranking step after hybrid search
-- SSO/SAML and SCIM user provisioning
+What a production build on AWS would add:
+- Amazon S3 for documents, and Aurora PostgreSQL with pgvector or OpenSearch for search
+- OCR and layout-aware extraction (Amazon Textract)
+- a background ingestion queue (SQS + workers)
+- SSO with the agency directory (Amazon Cognito / SAML)
 - audit logging of document access
-- per-tenant isolation (a separate project or schema per customer)
-- usage metering and rate limits
-- data-retention controls
+- document versioning, so a circular can be marked as superseding an earlier one
+- data-retention and classification controls

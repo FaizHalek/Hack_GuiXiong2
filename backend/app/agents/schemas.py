@@ -9,7 +9,9 @@ class QueryPlan(BaseModel):
     needs_retrieval: bool = Field(description="False only for greetings or questions about the assistant itself.")
     standalone_question: str = Field(description="The user's question rewritten to be understandable without the chat history.")
     sub_queries: list[str] = Field(description="1-3 focused search queries that together cover the question.")
-    keywords: list[str] = Field(default_factory=list, description="Distinctive names, tickers or phrases for keyword search.")
+    keywords: list[str] = Field(
+        default_factory=list, description="Distinctive names, reference numbers, acronyms or phrases for keyword search."
+    )
     direct_reply: str = Field(default="", description="Reply text when needs_retrieval is false; otherwise empty.")
 
 
@@ -35,6 +37,9 @@ class Source(BaseModel):
     chunk_id: str
     document_id: str
     document_title: str
+    doc_type: str | None = None  # policy, sop, circular, guideline, report, minutes, other
+    reference_no: str | None = None
+    issued_on: str | None = None  # ISO date
     page_index: int
     printed_label: str | None = None
     content: str
@@ -47,6 +52,9 @@ class Source(BaseModel):
             "chunk_id": self.chunk_id,
             "document_id": self.document_id,
             "document_title": self.document_title,
+            "doc_type": self.doc_type,
+            "reference_no": self.reference_no,
+            "issued_on": self.issued_on,
             "page_index": self.page_index,
             "printed_label": self.printed_label,
             "snippet": snippet or self.content[:300],

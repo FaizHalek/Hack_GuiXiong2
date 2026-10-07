@@ -1,69 +1,71 @@
-"""Text embeddings via the `embed` Supabase Edge Function (built-in gte-small).
+"""Local text embeddings.
 
-gte-small reads at most 512 tokens per text, so callers should keep inputs to
-roughly 1,800 characters (see Settings.max_chunk_chars). The model is
-symmetric: queries and documents are embedded the same way.
+`fastembed` runs a small ONNX sentence-embedding model on the CPU (default
+BAAI/bge-small-en-v1.5, 384-dim). The model is downloaded once on first use and
+cached by fastembed. Such models read at most 512 tokens, so callers should keep
+inputs to roughly 1,800 characters (see Settings.max_chunk_chars). Queries and
+documents are embedded the same way.
 
-Edge Functions have a 2 s CPU budget per request, so texts are sent in small
-batches; a batch that fails is split in half and retried, down to one text.
+`hash` is a dependency-free fallback: hashed bag of words and word pairs. It
+captures lexical overlap only, which is enough for offline demos and tests.
+
+Vectors are L2-normalised, so a dot product is the cosine similarity.
 """
 
-from concurrent.futures import ThreadPoolExecutor
+import hashlib
+import math
+import re
 from functools import lru_cache
-
-import httpx
 
 from app.config import get_settings
 
 
 class EmbeddingError(RuntimeError):
-    def __init__(self, message: str, retryable: bool = True):
-        super().__init__(message)
-        self.retryable = retryable
+    pass
 
 
 @lru_cache
-def _client() -> httpx.Client:
-    return httpx.Client(timeout=httpx.Timeout(60.0, connect=10.0))
-
-
-def _call(texts: list[str]) -> list[list[float]]:
-    s = get_settings()
-    url = f"{s.supabase_url.rstrip('/')}/functions/v1/{s.embed_function}"
-    headers = {"x-embed-secret": s.embed_secret, "apikey": s.supabase_anon_key}
-    last_error: Exception | None = None
-    for _attempt in range(2):
-        try:
-            response = _client().post(url, json={"texts": texts}, headers=headers)
-            if response.status_code == 200:
-                vectors = response.json()["embeddings"]
-                if len(vectors) != len(texts) or any(len(v) != s.embedding_dim for v in vectors):
-                    raise EmbeddingError(f"embed function returned unexpected shape for {len(texts)} texts", retryable=False)
-                return vectors
-            if response.status_code in (400, 401, 403, 404):
-                raise EmbeddingError(f"embed function returned {response.status_code}: {response.text[:300]}", retryable=False)
-            last_error = EmbeddingError(f"embed function returned {response.status_code}: {response.text[:300]}")
-        except httpx.HTTPError as e:
-            last_error = e
-    raise EmbeddingError(f"embed function failed: {last_error}")
-
-
-def _embed_batch(texts: list[str]) -> list[list[float]]:
+def _fastembed_model(name: str):
     try:
-        return _call(texts)
-    except EmbeddingError as e:
-        # Likely the CPU budget: retry each half separately. Auth/config errors fail fast.
-        if len(texts) == 1 or not e.retryable:
-            raise
-        mid = len(texts) // 2
-        return _embed_batch(texts[:mid]) + _embed_batch(texts[mid:])
+        from fastembed import TextEmbedding
+    except ImportError as e:
+        raise EmbeddingError("fastembed is not installed; pip install fastembed, or set EMBEDDING_PROVIDER=hash") from e
+    try:
+        return TextEmbedding(model_name=name)
+    except Exception as e:
+        raise EmbeddingError(f"could not load embedding model {name}: {e}") from e
+
+
+def _normalise(vector: list[float]) -> list[float]:
+    norm = math.sqrt(sum(v * v for v in vector))
+    return [v / norm for v in vector] if norm else vector
+
+
+def _hash_embed(text: str, dim: int) -> list[float]:
+    words = re.findall(r"\w+", text.lower())
+    features = words + [f"{a} {b}" for a, b in zip(words, words[1:], strict=False)]
+    vector = [0.0] * dim
+    for feature in features:
+        digest = hashlib.blake2b(feature.encode(), digest_size=8).digest()
+        bucket = int.from_bytes(digest[:4], "little") % dim
+        vector[bucket] += 1.0 if digest[4] & 1 else -1.0
+    return _normalise(vector)
 
 
 def embed(texts: list[str]) -> list[list[float]]:
     if not texts:
         return []
     s = get_settings()
-    batches = [texts[i : i + s.embed_batch_size] for i in range(0, len(texts), s.embed_batch_size)]
-    with ThreadPoolExecutor(max_workers=s.embed_concurrency) as pool:
-        results = list(pool.map(_embed_batch, batches))
-    return [vector for batch in results for vector in batch]
+    if s.embedding_provider == "hash":
+        return [_hash_embed(t, s.embedding_dim) for t in texts]
+    if s.embedding_provider != "fastembed":
+        raise EmbeddingError(f"unknown EMBEDDING_PROVIDER {s.embedding_provider!r}; use fastembed or hash")
+
+    model = _fastembed_model(s.embedding_model)
+    vectors = [_normalise([float(x) for x in v]) for v in model.embed(texts, batch_size=s.embed_batch_size)]
+    if len(vectors) != len(texts) or any(len(v) != s.embedding_dim for v in vectors):
+        raise EmbeddingError(
+            f"{s.embedding_model} returned vectors of size {len(vectors[0]) if vectors else 0}; "
+            f"set EMBEDDING_DIM to match the model"
+        )
+    return vectors

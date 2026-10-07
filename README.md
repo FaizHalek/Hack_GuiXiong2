@@ -1,6 +1,6 @@
-# AI Research Intelligence Assistant
+# Agency Knowledge Assistant
 
-A prototype that lets authorised users ask questions across a company's library of research PDFs and get answers that cite the report and page each fact came from. Clicking a citation opens the PDF at that page with the supporting text highlighted.
+A prototype that turns a government agency's documents (policies, SOPs, circulars, guidelines, reports and meeting minutes) into a searchable knowledge base. Officers ask questions in plain language and get answers that cite the document and page each fact came from. Clicking a citation opens the PDF at that page with the supporting text highlighted.
 
 - Problem statement: [docs/problem-overview.md](docs/problem-overview.md)
 - Solution outline: [docs/solution_v1.md](docs/solution_v1.md)
@@ -9,79 +9,59 @@ A prototype that lets authorised users ask questions across a company's library 
 | Part | Stack | Folder |
 |---|---|---|
 | Web app | React 19, Vite, Tailwind, TanStack Query, react-pdf | [frontend/](frontend/) |
-| API | FastAPI on Vercel (Python), pypdf, DeepSeek API (OpenAI SDK) | [backend/](backend/) |
-| Data | Supabase: Postgres + pgvector + full-text search, Auth, Storage, RLS, Edge Function embeddings (gte-small) | [supabase/](supabase/) |
+| API | FastAPI (Python), pypdf, DeepSeek API (OpenAI SDK) | [backend/](backend/) |
+| Data | Local storage: SQLite (tables + FTS5 keyword search), PDFs on disk, local embeddings (fastembed, bge-small) | `backend/data/` (created on first run) |
 | Evaluation | Golden-set runner with an LLM judge | [evals/](evals/) |
+
+Everything runs on one machine for the hackathon demo. No cloud database or storage account is needed; the only external service is the DeepSeek API for the language models.
 
 ## Setup
 
-### 1. Supabase
-
-1. Create a Supabase project.
-2. In the SQL editor, run the files in `supabase/migrations/` in order, then `supabase/seed.sql` (demo library labels; optional). With the Supabase CLI you can run `supabase db push` instead.
-3. Under **Authentication → URL configuration**, set the site URL to your frontend URL (e.g. `http://localhost:5173`), so invite and sign-in links come back to the app.
-4. Sign up your first user (an invite from the dashboard works), then make them an admin:
-   ```sql
-   update public.profiles set role = 'admin' where email = 'you@example.com';
-   ```
-
-The migrations create the private `research-pdfs` storage bucket.
-
-5. Deploy the embeddings Edge Function, which runs Supabase's built-in `gte-small` model. Pick a long random string as the shared secret, and put the same value in `EMBED_SECRET` in `backend/.env`:
-   ```bash
-   npx supabase login
-   npx supabase link --project-ref YOUR-PROJECT-REF
-   npx supabase secrets set EMBED_SECRET=your-long-random-string
-   npx supabase functions deploy embed --no-verify-jwt
-   ```
-   `--no-verify-jwt` is needed because the function checks the shared secret instead of a user token, so only the backend can call it.
-
-### 2. Backend
+### 1. Backend
 
 ```bash
 cd backend
 python -m venv .venv
 .venv/Scripts/activate        # Windows; use `source .venv/bin/activate` elsewhere
 pip install -r requirements-dev.txt
-cp .env.example .env          # fill in Supabase keys, DeepSeek key and EMBED_SECRET
+cp .env.example .env          # add your DeepSeek key; change the demo passwords
 uvicorn app.main:app --reload --port 8000
 ```
 
-`SUPABASE_JWT_SECRET` is only needed if your project still signs JWTs with the legacy HS256 secret. Projects on asymmetric signing keys are verified against the JWKS endpoint automatically.
+On first start the backend creates `backend/data/`:
 
-### 3. Frontend
+| Path | Contents |
+|---|---|
+| `data/app.db` | SQLite database: users, collections, documents, pages, chunks (with embeddings), FTS index, conversations, query logs |
+| `data/files/<document-id>/` | the uploaded PDFs |
+| `data/.secret` | the key that signs login tokens and PDF links (only when `APP_SECRET` is empty) |
+
+It also seeds four demo collections and two accounts, an admin and an officer. Their emails and passwords are in `backend/.env.example`. Change them in `.env` before the first start, or delete `data/app.db` to re-seed. To reset the demo completely, stop the server and delete `backend/data/`.
+
+The first indexing run downloads the embedding model (about 70 MB) and caches it. To run fully offline, set `EMBEDDING_PROVIDER=hash` (lexical-only vectors; keyword search still works). Changing the provider or model means re-indexing every document.
+
+### 2. Frontend
 
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local    # Supabase URL + anon key, API URL
+cp .env.example .env.local    # VITE_API_URL, defaults to http://localhost:8000
 npm run dev
 ```
 
 Open http://localhost:5173, sign in as the admin, then:
 
-1. **Admin → Libraries**: create a library per company (or use the seeded ones).
-2. **Admin → Documents**: choose libraries, upload PDFs, and wait for indexing to finish.
-3. **Admin → Users**: invite users and choose which libraries each can search.
-4. **Ask**: pick libraries and ask a question.
-
-### 4. Deploy to Vercel
-
-Create two Vercel projects from this repo:
-
-| Project | Root directory | Environment variables |
-|---|---|---|
-| backend | `backend` | everything in `backend/.env.example`; set `FRONTEND_ORIGIN` to the frontend URL |
-| frontend | `frontend` | everything in `frontend/.env.example`; set `VITE_API_URL` to the backend URL |
-
-`backend/vercel.json` routes every request to the FastAPI app and allows 60 s per request. Uploads never pass through Vercel: the browser sends PDFs straight to Supabase Storage with a signed URL. Indexing then runs in batches of `INGEST_BATCH_PAGES` pages per request, so each request stays under the time limit. If your Vercel plan allows a longer `maxDuration`, you can raise the batch size.
+1. **Admin → Collections**: create a collection per agency, department or document group (or use the seeded ones).
+2. **Admin → Documents**: pick a document type, an issue date and the collections, upload PDFs, and wait for indexing to finish. Use the pencil icon to fix titles, types, reference numbers and dates.
+3. **Admin → Users**: add officers with a temporary password and choose which collections each can search.
+4. **Documents**: browse by type and collection, newest first.
+5. **Ask**: pick collections and ask a question.
 
 ## Tests
 
 ```bash
-cd backend && pytest -q                 # extraction, chunking, citations, agent pipeline, API guards
+cd backend && pytest -q                 # extraction, chunking, citations, agent pipeline, local store + access control
 cd frontend && npm test                 # citation parsing, evidence highlighting, SSE parser
-bash supabase/tests/run.sh              # migrations + RLS + hybrid search in a throwaway pgvector container (Docker)
 ```
 
 Answer quality is measured separately with the golden-set evaluation; see [evals/README.md](evals/README.md).

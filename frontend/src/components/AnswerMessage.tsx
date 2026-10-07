@@ -4,11 +4,13 @@ import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { post } from '../lib/api'
 import { citationIdFromHref, linkCitations } from '../lib/citations'
+import { formatIssued } from '../lib/docTypes'
 import type { ChatMessage, Citation, EvalResult } from '../lib/types'
+import { DocTypePill } from './ui'
 
 const STATUS_TEXT: Record<string, string> = {
   planning: 'Understanding the question…',
-  retrieving: 'Searching the research libraries…',
+  retrieving: 'Searching the document collections…',
   answering: 'Writing the answer…',
   evaluating: 'Checking the answer against its sources…',
   regenerating: 'Revising the answer to fix unsupported claims…',
@@ -97,10 +99,11 @@ function SourceList({ citations, onOpen }: { citations: Citation[]; onOpen: (c: 
               <span className="mt-0.5 rounded bg-indigo-50 px-1 text-xs font-semibold text-indigo-700">{c.id}</span>
               <FileText className="mt-0.5 size-4 shrink-0 text-slate-400" />
               <span className="min-w-0">
+                {c.doc_type && c.doc_type !== 'other' && <DocTypePill type={c.doc_type} className="mr-1.5" />}
                 <span className="font-medium text-slate-700">{c.document_title}</span>
                 <span className="text-slate-500">
-                  {' '}
-                  · page {c.page_index}
+                  {c.reference_no ? ` · ${c.reference_no}` : ''}
+                  {c.issued_on ? ` · ${formatIssued(c.issued_on)}` : ''} · page {c.page_index}
                   {c.printed_label ? ` (printed ${c.printed_label})` : ''}
                 </span>
               </span>

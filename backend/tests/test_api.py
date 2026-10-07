@@ -21,7 +21,8 @@ def test_admin_routes_reject_non_admin():
     )
     try:
         assert client.get("/admin/users").status_code == 403
-        assert client.post("/admin/documents", json={"title": "t", "filename": "f.pdf"}).status_code == 403
+        r = client.post("/admin/documents", files={"file": ("f.pdf", b"%PDF-1.4", "application/pdf")}, data={"title": "t"})
+        assert r.status_code == 403
     finally:
         app.dependency_overrides.clear()
 
@@ -31,7 +32,7 @@ def test_chat_rejects_libraries_outside_grants():
         id="u", email="u@example.com", role="user", token="t", label_ids=["l1"]
     )
     try:
-        r = client.post("/chat", json={"question": "x", "label_ids": ["someone-elses-library"]})
+        r = client.post("/chat", json={"question": "x", "label_ids": ["another-agencys-collection"]})
         assert r.status_code == 403
     finally:
         app.dependency_overrides.clear()

@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { BookOpen, LogOut, MessagesSquare, Monitor, Moon, Settings, Sun } from 'lucide-react'
+import { FolderOpen, Landmark, LogOut, MessagesSquare, Monitor, Moon, Settings, Sun } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
@@ -38,13 +38,16 @@ export function Layout() {
   return (
     <div className="flex h-full flex-col">
       <header className="flex h-12 shrink-0 items-center gap-4 border-b border-slate-200 bg-surface px-4">
-        <span className="font-semibold text-slate-900">Research Assistant</span>
+        <span className="flex items-center gap-1.5 font-semibold text-slate-900">
+          <Landmark className="size-5 text-indigo-600" />
+          <span className="hidden sm:inline">Agency Knowledge Assistant</span>
+        </span>
         <nav className="flex items-center gap-1">
           <NavLink to="/" end className={linkClass}>
             <MessagesSquare className="size-4" /> Ask
           </NavLink>
           <NavLink to="/library" className={linkClass}>
-            <BookOpen className="size-4" /> Library
+            <FolderOpen className="size-4" /> Documents
           </NavLink>
           {me?.role === 'admin' && (
             <NavLink to="/admin" className={linkClass}>

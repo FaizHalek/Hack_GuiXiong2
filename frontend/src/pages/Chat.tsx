@@ -12,9 +12,10 @@ import { del, get, streamChat } from '../lib/api'
 import type { ChatEvent, ChatMessage, Citation, Conversation } from '../lib/types'
 
 const EXAMPLES = [
-  'Summarise the key findings across the most recent reports.',
-  'How has the outlook on margins changed over time?',
-  'What risks do the reports highlight most often?',
+  'What is the approval process for a purchase above RM50,000?',
+  'How many days of annual leave can be carried forward to next year?',
+  'What did the last management meeting decide about remote work?',
+  'Summarise the latest circular on IT security and who it applies to.',
 ]
 
 export function Chat() {
@@ -34,7 +35,7 @@ export function Chat() {
   // Set while a stream creates a conversation, so the URL change doesn't reload it.
   const streamedConversation = useRef<string | null>(null)
 
-  // Default to every library the user can access.
+  // Default to every collection the user can access.
   useEffect(() => {
     if (labels.length && selected.length === 0 && !conversationId) setSelected(labels.map((l) => l.id))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -218,11 +219,12 @@ export function Chat() {
           <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
             {messages.length === 0 && !loadedConversation.isLoading && (
               <div className="pt-16 text-center">
-                <h2 className="text-xl font-semibold">Ask across your research library</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Answers cite the report and page they come from. Click a citation to check it in the PDF.
+                <h2 className="text-xl font-semibold">What do you need to find out?</h2>
+                <p className="mx-auto mt-1 max-w-lg text-sm text-slate-500">
+                  Ask about policies, SOPs, circulars, guidelines, reports and meeting minutes. Answers cite the document and
+                  page they come from; click a citation to check it in the original PDF.
                 </p>
-                <div className="mt-6 grid gap-2 sm:grid-cols-3">
+                <div className="mt-6 grid gap-2 sm:grid-cols-2">
                   {EXAMPLES.map((q) => (
                     <button
                       key={q}
@@ -259,7 +261,7 @@ export function Chat() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
               rows={1}
-              placeholder={selected.length ? 'Ask a question about the selected libraries…' : 'Select at least one library'}
+              placeholder={selected.length ? 'Ask about a policy, procedure, circular or decision…' : 'Select at least one collection'}
               className="max-h-40 min-h-[2.25rem] flex-1 resize-none bg-transparent px-2 py-1.5 text-[15px] outline-none"
             />
             <button
@@ -272,7 +274,7 @@ export function Chat() {
             </button>
           </div>
           <p className="mx-auto mt-1.5 max-w-3xl text-center text-xs text-slate-400">
-            Searching {selected.length} of {labels.length} libraries. AI answers can be wrong; check the cited pages.
+            Searching {selected.length} of {labels.length} collections. AI answers can be wrong; check the cited pages before acting on them.
           </p>
         </form>
       </section>

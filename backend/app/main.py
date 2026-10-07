@@ -8,7 +8,7 @@ from app.routers import admin, chat, documents, me
 
 logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="AI Research Intelligence Assistant", version="0.1.0")
+app = FastAPI(title="Government Knowledge Assistant", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,

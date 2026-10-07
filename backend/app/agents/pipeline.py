@@ -15,8 +15,6 @@ import logging
 import time
 from collections.abc import Iterator
 
-from supabase import Client
-
 from app.agents import answer_agent, evaluator, query_agent, retrieve
 from app.agents.citations import resolve
 from app.agents.schemas import Evaluation, Source
@@ -25,8 +23,8 @@ from app.llm.deepseek import Usage
 log = logging.getLogger(__name__)
 
 NO_SOURCES_REPLY = (
-    "I couldn't find anything relevant to this question in the selected research libraries. "
-    "Try rephrasing, or select additional libraries."
+    "I couldn't find anything relevant to this question in the selected document collections. "
+    "Try rephrasing, or select additional collections."
 )
 
 
@@ -61,7 +59,7 @@ def _safe_evaluate(question: str, answer: str, sources: list[Source], usage: Usa
         return None
 
 
-def run(db: Client, question: str, label_ids: list[str], history: list[dict]) -> Iterator[dict]:
+def run(question: str, label_ids: list[str], history: list[dict]) -> Iterator[dict]:
     started = time.monotonic()
     usage = Usage()
 
@@ -95,12 +93,14 @@ def run(db: Client, question: str, label_ids: list[str], history: list[dict]) ->
     yield {"type": "plan", "plan": plan.model_dump()}
 
     if not plan.needs_retrieval:
-        reply = plan.direct_reply or "I answer questions using the research libraries you've selected."
+        reply = plan.direct_reply or (
+            "I answer questions using the policies, SOPs, circulars and other documents in the collections you've selected."
+        )
         yield {"type": "delta", "text": reply}
         yield final(reply, [], {"verdict": "not_applicable", "grounded_score": None, "summary": "", "claims": []}, [])
         return
 
-    sources = retrieve.retrieve(db, plan, label_ids)
+    sources = retrieve.retrieve(plan, label_ids)
     yield {"type": "sources", "sources": [s.public() for s in sources]}
 
     if not sources:

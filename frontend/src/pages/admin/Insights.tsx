@@ -20,7 +20,7 @@ const FILTERS: { value: Verdict | ''; label: string }[] = [
   { value: '', label: 'All' },
   { value: 'low_confidence', label: 'Low confidence' },
   { value: 'partial', label: 'Partial' },
-  { value: 'no_sources', label: 'No sources found' },
+  { value: 'no_sources', label: 'Knowledge gaps' },
   { value: 'grounded', label: 'Grounded' },
 ]
 
@@ -50,13 +50,18 @@ export function Insights() {
     <div className="space-y-5">
       <ErrorNote error={stats.error ?? logs.error} />
       {s && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
           <Stat label="Documents" value={`${s.documents_ready}/${s.documents}`} hint={`${s.pages} pages indexed`} />
           <Stat label="Questions asked" value={s.queries} hint={`${s.users} users`} />
           <Stat
             label="Avg. groundedness"
             value={s.avg_grounded === null ? '–' : `${Math.round(s.avg_grounded * 100)}%`}
             hint={`${s.regenerated} answers revised by the evaluator`}
+          />
+          <Stat
+            label="Knowledge gaps"
+            value={s.unanswered ?? 0}
+            hint="questions no document could answer"
           />
           <Stat
             label="Helpful"

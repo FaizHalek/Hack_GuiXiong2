@@ -1,18 +1,21 @@
 [project]
-name = "research-assistant-backend"
-version = "0.1.0"
+name = "gov-knowledge-assistant-backend"
+version = "0.2.0"
 requires-python = ">=3.12"
-# Vercel installs from this list (not requirements.txt) when pyproject.toml exists; keep the two in sync.
+# Keep in sync with requirements.txt.
 dependencies = [
     "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "python-multipart>=0.0.9",
     "pydantic>=2.8",
     "pydantic-settings>=2.4",
     "openai>=1.50",
     "httpx>=0.27",
-    "supabase>=2.10",
     "pypdf>=5.0",
     "fonttools>=4.50",
-    "PyJWT[crypto]>=2.9",
+    "PyJWT>=2.9",
+    "numpy>=1.26",
+    "fastembed>=0.4",
 ]
 
 [tool.ruff]

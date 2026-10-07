@@ -14,13 +14,14 @@ dist/
 .env.*
 !.env.example
 
-# Vercel / Supabase
+# Vercel
 .vercel/
-supabase/.temp/
-supabase/.branches/
 
 # Eval output
 evals/reports/
 
 # Sample PDFs for local testing
 test_data/
+
+# Local storage (SQLite database and uploaded PDFs)
+backend/data/

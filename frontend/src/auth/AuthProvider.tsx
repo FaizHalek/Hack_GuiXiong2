@@ -1,57 +1,52 @@
-import type { Session } from '@supabase/supabase-js'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { get } from '../lib/api'
-import { supabase } from '../lib/supabase'
+import { get, login } from '../lib/api'
+import { getToken, onTokenChange, setToken } from '../lib/session'
 import type { Me } from '../lib/types'
 
 interface AuthState {
-  session: Session | null
+  /** The access token, or null when signed out. */
+  session: string | null
   sessionLoading: boolean
   me: Me | undefined
   meLoading: boolean
   meError: Error | null
+  signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null)
-  const [sessionLoading, setSessionLoading] = useState(true)
+  const [session, setSession] = useState<string | null>(getToken)
   const queryClient = useQueryClient()
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setSessionLoading(false)
-    })
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next))
-    return () => data.subscription.unsubscribe()
-  }, [])
+  useEffect(
+    () =>
+      onTokenChange((token) => {
+        setSession(token)
+        if (!token) queryClient.clear()
+      }),
+    [queryClient],
+  )
 
-  const userId = session?.user.id
   const meQuery = useQuery({
-    queryKey: ['me', userId],
+    queryKey: ['me', session],
     queryFn: () => get<Me>('/me'),
-    enabled: !!userId,
+    enabled: !!session,
     staleTime: 60_000,
   })
-
-  const signOut = async () => {
-    await supabase.auth.signOut()
-    queryClient.clear()
-  }
 
   return (
     <AuthContext.Provider
       value={{
         session,
-        sessionLoading,
+        sessionLoading: false,
         me: meQuery.data,
         meLoading: meQuery.isLoading,
         meError: meQuery.error,
-        signOut,
+        signIn: login,
+        signOut: async () => setToken(null),
       }}
     >
       {children}

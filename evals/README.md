@@ -14,19 +14,19 @@
 
 ## Building the golden set
 
-Copy `golden_set.example.jsonl` to `golden_set.jsonl` and replace the examples with 30–50 questions written with a domain expert against the demo library. Each line holds one question:
+Copy `golden_set.example.jsonl` to `golden_set.jsonl` and replace the examples with 30–50 questions written with a domain expert against the demo collections. Each line holds one question:
 
 ```json
-{"id": "comp-01", "type": "comparative", "labels": ["Acme Corp"],
- "question": "How did the margin outlook change between the 2023 outlook and the Q2 2024 update?",
- "expected": [{"document": "Acme 2023 Annual Outlook", "page": 4}, {"document": "Acme Q2 2024 Update", "page": 2}],
+{"id": "comp-01", "type": "comparative", "labels": ["Human Resources"],
+ "question": "How did the leave carry-forward rule change between the 2022 and 2024 circulars?",
+ "expected": [{"document": "Annual Leave Circular 2022", "page": 2}, {"document": "Annual Leave Circular 2024", "page": 2}],
  "reference_answer": "..."}
 ```
 
 - `type` is one of `single_fact`, `synthesis`, `comparative` or `unanswerable`. Cover all four types.
-- `labels` names the libraries to search, by name or id.
+- `labels` names the collections to search, by name or id.
 - In `expected`, `page` is the **physical** page number in the PDF file (the number the in-app viewer shows), not the number printed on the page. `document` is the title shown in the app, or the document id.
-- Unanswerable questions have `"expected": []` and a reference answer saying the library doesn't cover them.
+- Unanswerable questions have `"expected": []` and a reference answer saying the collections don't cover them.
 
 Spot-check about 20 of the judge's citation verdicts by hand before you rely on the numbers.
 

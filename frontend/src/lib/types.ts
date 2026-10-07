@@ -18,10 +18,16 @@ export interface Me {
 
 export type DocumentStatus = 'uploaded' | 'processing' | 'ready' | 'failed'
 
+export type DocType = 'policy' | 'sop' | 'circular' | 'guideline' | 'report' | 'minutes' | 'other'
+
 export interface DocumentRow {
   id: string
   title: string
   filename: string
+  doc_type: DocType
+  reference_no: string | null
+  /** ISO date the document was issued or took effect */
+  issued_on: string | null
   page_count: number | null
   pages_processed: number
   status: DocumentStatus
@@ -35,6 +41,9 @@ export interface Citation {
   chunk_id: string
   document_id: string
   document_title: string
+  doc_type?: DocType | null
+  reference_no?: string | null
+  issued_on?: string | null
   page_index: number
   printed_label: string | null
   snippet: string
@@ -146,6 +155,8 @@ export interface AdminStats {
   thumbs_up: number
   thumbs_down: number
   regenerated: number
+  /** Questions where no relevant document was found */
+  unanswered: number
 }
 
 export type ChatEvent =

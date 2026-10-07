@@ -19,5 +19,5 @@ the extraction algorithm must index and cite the pdf. don't rely on the page num
 5. Techstack
 - frontend (react)
 - backend (fastapi)
-- deployment (vercel)
-- database (supabase)
+- deployment (local machine for the hackathon demo)
+- database (local storage: SQLite + PDFs on disk, local embeddings)

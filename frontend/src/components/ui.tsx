@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import { Loader2 } from 'lucide-react'
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
+import { docTypeInfo } from '../lib/docTypes'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
@@ -62,6 +63,19 @@ export function LabelPill({ name, color, className }: { name: string; color: str
     >
       <span className="size-1.5 rounded-full" style={{ backgroundColor: color }} />
       {name}
+    </span>
+  )
+}
+
+/** Small uppercase tag for a document type (Policy, SOP, Circular, ...). */
+export function DocTypePill({ type, className }: { type: string | null | undefined; className?: string }) {
+  const info = docTypeInfo(type)
+  return (
+    <span
+      className={clsx('shrink-0 rounded px-1.5 py-px text-[11px] font-semibold uppercase tracking-wide', className)}
+      style={{ color: info.color, backgroundColor: `${info.color}1a` }}
+    >
+      {info.label}
     </span>
   )
 }

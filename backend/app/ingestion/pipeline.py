@@ -1,12 +1,14 @@
-"""Batched ingestion: each call processes one slice of pages so a single request
-stays inside Vercel's function time limit. The admin UI calls it in a loop
-until `done` is true. Re-running a batch is safe (rows are upserted).
+"""Batched ingestion: each call processes one slice of pages, so the admin UI can
+show progress and resume a failed document. The UI calls it in a loop until
+`done` is true. Re-running a batch is safe (rows are upserted).
 """
 
 from dataclasses import dataclass
 
+import numpy as np
+
 from app.config import get_settings
-from app.db import service_client
+from app.db import connect, fetch_one, file_path, new_id, now
 from app.ingestion.chunk import embedding_text, split_page
 from app.ingestion.extract import detect_boilerplate, extract_pages, open_pdf
 from app.llm import embeddings
@@ -22,73 +24,75 @@ class BatchResult:
     empty_pages: list[int]
 
 
+def _set_status(document_id: str, **fields) -> None:
+    columns = ", ".join(f"{k} = ?" for k in fields)
+    with connect() as conn:
+        conn.execute(f"update documents set {columns}, updated_at = ? where id = ?", [*fields.values(), now(), document_id])
+
+
 def ingest_batch(document_id: str, start: int) -> BatchResult:
     s = get_settings()
-    db = service_client()
-    doc = db.table("documents").select("*").eq("id", document_id).single().execute().data
+    with connect() as conn:
+        doc = fetch_one(conn, "select id, title, storage_path from documents where id = ?", (document_id,))
+    if doc is None:
+        raise LookupError(f"document {document_id} not found")
 
     try:
-        data = db.storage.from_(s.storage_bucket).download(doc["storage_path"])
-        reader = open_pdf(data)
+        reader = open_pdf(file_path(doc["storage_path"]).read_bytes())
         page_count = len(reader.pages)
 
         if start == 0:
             # Fresh (re-)ingestion: drop previous pages; chunks cascade.
-            db.table("pages").delete().eq("document_id", document_id).execute()
-            db.table("documents").update(
-                {"status": "processing", "page_count": page_count, "pages_processed": 0, "error": None}
-            ).eq("id", document_id).execute()
+            with connect() as conn:
+                conn.execute("delete from pages where document_id = ?", (document_id,))
+            _set_status(document_id, status="processing", page_count=page_count, pages_processed=0, error=None)
 
         end = min(start + s.ingest_batch_pages, page_count)
         pages = extract_pages(reader, start, end, detect_boilerplate(reader))
 
-        page_rows = (
-            (
-                db.table("pages")
-                .upsert(
-                    [
-                        {
-                            "document_id": document_id,
-                            "page_index": p.page_index,
-                            "printed_label": p.printed_label,
-                            "text": p.text,
-                            "char_count": len(p.text),
-                        }
-                        for p in pages
-                    ],
-                    on_conflict="document_id,page_index",
-                )
-                .execute()
-                .data
-            )
-            if pages
-            else []
-        )
-        page_ids = {row["page_index"]: row["id"] for row in page_rows}
-
-        chunk_rows = []
-        for p in pages:
-            for ci, content in enumerate(split_page(p.text, s.max_chunk_chars, s.chunk_overlap_chars)):
-                chunk_rows.append(
-                    {
-                        "document_id": document_id,
-                        "page_id": page_ids[p.page_index],
-                        "page_index": p.page_index,
-                        "chunk_index": ci,
-                        "content": content,
-                    }
-                )
-
+        chunk_rows = [
+            {"page_index": p.page_index, "chunk_index": ci, "content": content}
+            for p in pages
+            for ci, content in enumerate(split_page(p.text, s.max_chunk_chars, s.chunk_overlap_chars))
+        ]
+        # Embed before writing anything, so a model failure leaves the batch untouched.
         vectors = embeddings.embed([embedding_text(doc["title"], r["page_index"], r["content"]) for r in chunk_rows])
-        for row, vec in zip(chunk_rows, vectors, strict=True):
-            row["embedding"] = vec
-        if chunk_rows:
-            db.table("chunks").upsert(chunk_rows, on_conflict="document_id,page_index,chunk_index").execute()
+
+        with connect() as conn:
+            page_ids = {}
+            for p in pages:
+                conn.execute(
+                    "insert into pages (id, document_id, page_index, printed_label, text, char_count)"
+                    " values (?, ?, ?, ?, ?, ?)"
+                    " on conflict (document_id, page_index) do update set"
+                    " printed_label = excluded.printed_label, text = excluded.text, char_count = excluded.char_count",
+                    (new_id(), document_id, p.page_index, p.printed_label, p.text, len(p.text)),
+                )
+                page_ids[p.page_index] = conn.execute(
+                    "select id from pages where document_id = ? and page_index = ?", (document_id, p.page_index)
+                ).fetchone()[0]
+                # A re-run batch may produce fewer chunks than before; drop the old ones for this page.
+                conn.execute("delete from chunks where page_id = ?", (page_ids[p.page_index],))
+
+            conn.executemany(
+                "insert into chunks (id, document_id, page_id, page_index, chunk_index, content, embedding)"
+                " values (?, ?, ?, ?, ?, ?, ?)",
+                [
+                    (
+                        new_id(),
+                        document_id,
+                        page_ids[r["page_index"]],
+                        r["page_index"],
+                        r["chunk_index"],
+                        r["content"],
+                        np.asarray(vector, dtype=np.float32).tobytes(),
+                    )
+                    for r, vector in zip(chunk_rows, vectors, strict=True)
+                ],
+            )
 
         done = end >= page_count
-        db.table("documents").update({"pages_processed": end, "status": "ready" if done else "processing"}).eq(
-            "id", document_id
-        ).execute()
+        _set_status(document_id, pages_processed=end, status="ready" if done else "processing")
 
         return BatchResult(
             document_id=document_id,
@@ -99,5 +103,5 @@ def ingest_batch(document_id: str, start: int) -> BatchResult:
             empty_pages=[p.page_index for p in pages if not p.text],
         )
     except Exception as e:
-        db.table("documents").update({"status": "failed", "error": str(e)[:1000]}).eq("id", document_id).execute()
+        _set_status(document_id, status="failed", error=str(e)[:1000])
         raise

@@ -48,3 +48,15 @@ def report_pdf() -> bytes:
         ],
         roman_front_matter=2,
     )
+
+
+@pytest.fixture
+def local_store(tmp_path, monkeypatch):
+    """Point the app at an empty data folder with offline (hash) embeddings."""
+    from app.config import get_settings
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    monkeypatch.setattr(settings, "app_secret", "test-secret-that-is-at-least-32-bytes-long")
+    monkeypatch.setattr(settings, "embedding_provider", "hash")
+    return settings

@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, RefreshCw, Trash2, Upload } from 'lucide-react'
-import { useRef, useState } from 'react'
-import { Button, Card, EmptyState, ErrorNote, Spinner } from '../../components/ui'
-import { del, get, post, put } from '../../lib/api'
-import { STORAGE_BUCKET, supabase } from '../../lib/supabase'
-import type { DocumentRow, Label } from '../../lib/types'
+import { AlertTriangle, Pencil, RefreshCw, Trash2, Upload } from 'lucide-react'
+import { useRef, useState, type FormEvent } from 'react'
+import { Button, Card, DocTypePill, EmptyState, ErrorNote, Input, Spinner } from '../../components/ui'
+import { del, get, patch, post, postForm, put } from '../../lib/api'
+import { DOC_TYPES, formatIssued } from '../../lib/docTypes'
+import type { DocType, DocumentRow, Label } from '../../lib/types'
 import { LabelToggles } from './LabelToggles'
 
 type AdminDocument = DocumentRow & { empty_pages: number }
@@ -12,7 +12,7 @@ type AdminDocument = DocumentRow & { empty_pages: number }
 interface UploadJob {
   key: string
   name: string
-  phase: 'registering' | 'uploading' | 'ingesting' | 'done' | 'error'
+  phase: 'uploading' | 'ingesting' | 'done' | 'error'
   pagesDone: number
   pageCount: number | null
   error?: string
@@ -41,10 +41,27 @@ const titleFromFilename = (name: string) =>
     .replace(/[_-]+/g, ' ')
     .trim()
 
+/** Guess the document type from words in the file name; the admin can correct it afterwards. */
+function guessType(name: string): DocType {
+  const n = name.toLowerCase()
+  if (/\bsop\b|standard.operating|procedure/.test(n)) return 'sop'
+  if (/circular|pekeliling/.test(n)) return 'circular'
+  if (/minute|minit|meeting|mesyuarat/.test(n)) return 'minutes'
+  if (/guideline|garis.panduan/.test(n)) return 'guideline'
+  if (/policy|dasar/.test(n)) return 'policy'
+  if (/report|laporan/.test(n)) return 'report'
+  return 'other'
+}
+
+const selectClass = 'rounded-md border border-slate-300 bg-surface px-2 py-1.5 text-sm'
+
 export function Documents() {
   const queryClient = useQueryClient()
   const fileInput = useRef<HTMLInputElement>(null)
   const [uploadLabels, setUploadLabels] = useState<string[]>([])
+  const [uploadType, setUploadType] = useState<DocType | 'auto'>('auto')
+  const [uploadIssued, setUploadIssued] = useState('')
+  const [editing, setEditing] = useState<string | null>(null)
   const [jobs, setJobs] = useState<UploadJob[]>([])
   const [busyDoc, setBusyDoc] = useState<Record<string, string>>({})
   const [error, setError] = useState<unknown>(null)
@@ -62,18 +79,15 @@ export function Documents() {
 
   const uploadFile = async (file: File) => {
     const key = `${file.name}-${crypto.randomUUID()}`
-    setJobs((prev) => [{ key, name: file.name, phase: 'registering', pagesDone: 0, pageCount: null }, ...prev])
+    setJobs((prev) => [{ key, name: file.name, phase: 'uploading', pagesDone: 0, pageCount: null }, ...prev])
     try {
-      const { document, upload } = await post<{
-        document: DocumentRow
-        upload: { path: string; token: string }
-      }>('/admin/documents', { title: titleFromFilename(file.name), filename: file.name, label_ids: uploadLabels })
-
-      updateJob(key, { phase: 'uploading' })
-      const { error: uploadError } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .uploadToSignedUrl(upload.path, upload.token, file, { contentType: 'application/pdf' })
-      if (uploadError) throw uploadError
+      const form = new FormData()
+      form.append('file', file)
+      form.append('title', titleFromFilename(file.name))
+      form.append('doc_type', uploadType === 'auto' ? guessType(file.name) : uploadType)
+      if (uploadIssued) form.append('issued_on', uploadIssued)
+      uploadLabels.forEach((id) => form.append('label_ids', id))
+      const document = await postForm<DocumentRow>('/admin/documents', form)
 
       updateJob(key, { phase: 'ingesting' })
       refresh()
@@ -118,7 +132,7 @@ export function Documents() {
     )
 
   const remove = (d: AdminDocument) => {
-    if (!confirm(`Delete “${d.title}”? This removes the PDF and its index.`)) return
+    if (!confirm(`Delete “${d.title}”? This removes the PDF from local storage and from the search index.`)) return
     withBusy(d.id, 'Deleting…', () => del(`/admin/documents/${d.id}`))
   }
 
@@ -136,18 +150,42 @@ export function Documents() {
       <Card className="space-y-3 p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-medium">Upload reports</h2>
-            <p className="text-sm text-slate-500">PDFs are split into pages, indexed and tagged with the libraries you choose.</p>
+            <h2 className="font-medium">Upload documents</h2>
+            <p className="text-sm text-slate-500">
+              PDFs are saved to local storage, split into pages and indexed for search in the collections you choose.
+            </p>
           </div>
           <Button onClick={() => fileInput.current?.click()}>
             <Upload className="size-4" /> Choose PDFs
           </Button>
           <input ref={fileInput} type="file" accept="application/pdf" multiple hidden onChange={(e) => onFiles(e.target.files)} />
         </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+          <label className="flex items-center gap-2">
+            <span className="text-slate-500">Type:</span>
+            <select value={uploadType} onChange={(e) => setUploadType(e.target.value as DocType | 'auto')} className={selectClass}>
+              <option value="auto">Detect from file name</option>
+              {DOC_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="whitespace-nowrap text-slate-500">Issued on:</span>
+            <div className="w-40">
+              <Input type="date" value={uploadIssued} onChange={(e) => setUploadIssued(e.target.value)} />
+            </div>
+          </label>
+        </div>
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-slate-500">Add to libraries:</span>
+          <span className="whitespace-nowrap text-slate-500">Add to collections:</span>
           <LabelToggles labels={labelList} status={labels.status} selected={uploadLabels} onChange={setUploadLabels} />
         </div>
+        {uploadLabels.length === 0 && labelList.length > 0 && (
+          <p className="text-xs text-amber-700">Choose at least one collection, or no user will be able to search the uploads.</p>
+        )}
         {jobs.length > 0 && (
           <ul className="space-y-1.5">
             {jobs.map((j) => (
@@ -189,7 +227,7 @@ export function Documents() {
             <thead className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400">
               <tr>
                 <th className="px-4 py-2 font-medium">Document</th>
-                <th className="px-4 py-2 font-medium">Libraries</th>
+                <th className="px-4 py-2 font-medium">Collections</th>
                 <th className="px-4 py-2 font-medium">Status</th>
                 <th className="px-4 py-2" />
               </tr>
@@ -198,10 +236,21 @@ export function Documents() {
               {docs.data.map((d) => (
                 <tr key={d.id} className="align-top">
                   <td className="px-4 py-3">
-                    <p className="font-medium">{d.title}</p>
-                    <p className="text-xs text-slate-500">
-                      {d.filename} · {d.page_count ?? '?'} pages
-                    </p>
+                    {editing === d.id ? (
+                      <MetadataForm doc={d} onDone={() => setEditing(null)} onSaved={refresh} />
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <DocTypePill type={d.doc_type} />
+                          <p className="font-medium">{d.title}</p>
+                        </div>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {[d.reference_no, d.issued_on && `issued ${formatIssued(d.issued_on)}`, d.filename, `${d.page_count ?? '?'} pages`]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
+                      </>
+                    )}
                     {d.empty_pages > 0 && (
                       <p className="mt-1 flex items-center gap-1 text-xs text-amber-700">
                         <AlertTriangle className="size-3.5" />
@@ -212,7 +261,7 @@ export function Documents() {
                   <td className="px-4 py-3">
                     <LabelToggles labels={labelList} status={labels.status} selected={d.label_ids} onChange={(ids) => setDocLabels(d, ids)} />
                     {d.label_ids.length === 0 && (
-                      <p className="mt-1 text-xs text-amber-700">Not in any library: no user can search it.</p>
+                      <p className="mt-1 text-xs text-amber-700">Not in any collection: no user can search it.</p>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -220,6 +269,9 @@ export function Documents() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
+                      <Button variant="ghost" title="Edit details" disabled={editing === d.id} onClick={() => setEditing(d.id)}>
+                        <Pencil className="size-4" />
+                      </Button>
                       {(d.status === 'failed' || d.status === 'processing') && !busyDoc[d.id] && (
                         <Button variant="secondary" onClick={() => reingest(d, false)}>
                           Resume
@@ -240,6 +292,65 @@ export function Documents() {
         )}
       </Card>
     </div>
+  )
+}
+
+function MetadataForm({ doc, onDone, onSaved }: { doc: AdminDocument; onDone: () => void; onSaved: () => void }) {
+  const [title, setTitle] = useState(doc.title)
+  const [docType, setDocType] = useState<DocType>(doc.doc_type)
+  const [reference, setReference] = useState(doc.reference_no ?? '')
+  const [issued, setIssued] = useState(doc.issued_on ?? '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<unknown>(null)
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    setError(null)
+    try {
+      await patch(`/admin/documents/${doc.id}`, {
+        title,
+        doc_type: docType,
+        reference_no: reference || null,
+        issued_on: issued || null,
+      })
+      onSaved()
+      onDone()
+    } catch (err) {
+      setError(err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={save} className="space-y-2">
+      <Input required value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Title" />
+      <div className="flex flex-wrap gap-2">
+        <select value={docType} onChange={(e) => setDocType(e.target.value as DocType)} className={selectClass} aria-label="Type">
+          {DOC_TYPES.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+        <div className="w-40">
+          <Input placeholder="Reference no." value={reference} onChange={(e) => setReference(e.target.value)} />
+        </div>
+        <div className="w-40">
+          <Input type="date" value={issued} onChange={(e) => setIssued(e.target.value)} aria-label="Issued on" />
+        </div>
+      </div>
+      <ErrorNote error={error} />
+      <div className="flex gap-2">
+        <Button type="submit" loading={saving}>
+          Save
+        </Button>
+        <Button type="button" variant="secondary" onClick={onDone}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   )
 }
 

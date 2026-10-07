@@ -41,9 +41,14 @@ def test_format_sources_includes_page_and_printed_label():
 # --- retrieval helpers -------------------------------------------------------
 
 
-def test_fts_text_ors_keywords_and_quotes_phrases():
-    assert fts_text(["NVDA", "operating margin"], "fallback") == 'NVDA or "operating margin"'
-    assert fts_text([], "fallback") == "fallback"
+def test_fts_text_ors_quoted_keywords():
+    assert fts_text(["PK 3/2024", "annual leave"], "fallback") == '"PK 3/2024" OR "annual leave"'
+    assert fts_text(['say "hi"'], "") == '"say ""hi"""'  # quotes are escaped, not parsed as FTS syntax
+
+
+def test_fts_text_falls_back_to_content_words():
+    assert fts_text([], "What is the leave policy for the officers?") == '"leave" OR "policy" OR "officers"'
+    assert fts_text([], "") == ""
 
 
 def hit(doc, page, chunk, score):
@@ -111,7 +116,7 @@ def _patch(monkeypatch, plan, sources, answers, evaluations):
     answers, evaluations = list(answers), list(evaluations)
     feedback_seen = []
     monkeypatch.setattr(pipeline.query_agent, "plan_query", lambda q, h, u=None: plan)
-    monkeypatch.setattr(pipeline.retrieve, "retrieve", lambda db, p, labels: sources)
+    monkeypatch.setattr(pipeline.retrieve, "retrieve", lambda p, labels: sources)
 
     def fake_stream(question, sources, feedback=None, usage=None):
         feedback_seen.append(feedback)
@@ -126,7 +131,7 @@ def test_pipeline_happy_path(monkeypatch, plan):
     good = Evaluation(claims=[claim(quote="exact words")], grounded_score=1.0, summary="ok")
     _patch(monkeypatch, plan, [src(1), src(2)], [["Revenue grew ", "[S1]."]], [good])
 
-    events = list(pipeline.run(None, "q", ["l1"], []))
+    events = list(pipeline.run("q", ["l1"], []))
     types = [e["type"] for e in events]
     assert types == ["plan", "sources", "delta", "delta", "evaluating", "final"]
 
@@ -147,7 +152,7 @@ def test_pipeline_regenerates_once_with_feedback(monkeypatch, plan):
     good = Evaluation(claims=[claim()], grounded_score=1.0, summary="ok")
     feedback_seen = _patch(monkeypatch, plan, [src(1), src(2)], [["Wrong [S2]."], ["Right [S1]."]], [bad, good])
 
-    events = list(pipeline.run(None, "q", ["l1"], []))
+    events = list(pipeline.run("q", ["l1"], []))
     types = [e["type"] for e in events]
     assert "regenerate" in types
     assert feedback_seen == [None, bad]
@@ -163,14 +168,14 @@ def test_pipeline_regenerates_once_with_feedback(monkeypatch, plan):
 def test_pipeline_flags_low_confidence_after_second_failure(monkeypatch, plan):
     bad = Evaluation(claims=[claim("unsupported")], grounded_score=0.1, summary="no")
     _patch(monkeypatch, plan, [src(1)], [["A [S1]."], ["B [S1]."]], [bad, bad])
-    final = list(pipeline.run(None, "q", ["l1"], []))[-1]
+    final = list(pipeline.run("q", ["l1"], []))[-1]
     assert final["eval"]["verdict"] == "low_confidence"
     assert [e for e in final["citations"]][0]["snippet"] == "content 1"  # no trusted quote -> chunk text
 
 
 def test_pipeline_no_sources(monkeypatch, plan):
     _patch(monkeypatch, plan, [], [], [])
-    final = list(pipeline.run(None, "q", ["l1"], []))[-1]
+    final = list(pipeline.run("q", ["l1"], []))[-1]
     assert final["eval"]["verdict"] == "no_sources"
     assert final["citations"] == []
 
@@ -179,5 +184,5 @@ def test_pipeline_direct_reply_skips_retrieval(monkeypatch):
     p = QueryPlan(needs_retrieval=False, standalone_question="hi", sub_queries=[], keywords=[], direct_reply="Hello!")
     monkeypatch.setattr(pipeline.query_agent, "plan_query", lambda q, h, u=None: p)
     monkeypatch.setattr(pipeline.retrieve, "retrieve", lambda *a: pytest.fail("should not retrieve"))
-    events = list(pipeline.run(None, "hi", ["l1"], []))
+    events = list(pipeline.run("hi", ["l1"], []))
     assert [e["type"] for e in events] == ["plan", "delta", "final"]

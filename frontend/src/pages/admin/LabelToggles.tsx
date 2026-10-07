@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import type { Label } from '../../lib/types'
 
-/** Row of clickable library pills; selected ones are filled. */
+/** Row of clickable collection pills; selected ones are filled. */
 export function LabelToggles({
   labels,
   selected,
@@ -13,12 +13,12 @@ export function LabelToggles({
   selected: string[]
   onChange: (ids: string[]) => void
   disabled?: boolean
-  /** Status of the libraries query, so "loading" and "failed" aren't shown as "none". */
+  /** Status of the collections query, so "loading" and "failed" aren't shown as "none". */
   status?: 'pending' | 'error' | 'success'
 }) {
-  if (status === 'pending') return <span className="text-xs text-slate-400">Loading libraries…</span>
-  if (status === 'error') return <span className="text-xs text-red-600">Couldn't load libraries; refresh to retry</span>
-  if (!labels.length) return <span className="text-xs text-slate-400">No libraries yet</span>
+  if (status === 'pending') return <span className="text-xs text-slate-400">Loading collections…</span>
+  if (status === 'error') return <span className="text-xs text-red-600">Couldn't load collections; refresh to retry</span>
+  if (!labels.length) return <span className="text-xs text-slate-400">No collections yet</span>
   return (
     <div className="flex flex-wrap gap-1">
       {labels.map((l) => {

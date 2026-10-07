@@ -26,6 +26,14 @@ def format_sources(sources: list[Source]) -> str:
     parts = []
     for s in sources:
         page = f"{s.page_index}" + (f" (printed {s.printed_label})" if s.printed_label else "")
-        title = s.document_title.replace('"', "'")
-        parts.append(f'<source id="{s.id}" doc="{title}" page="{page}">\n{s.content}\n</source>')
+        attrs = {
+            "id": s.id,
+            "doc": s.document_title,
+            "type": s.doc_type if s.doc_type != "other" else None,
+            "ref": s.reference_no,
+            "issued": s.issued_on,
+            "page": page,
+        }
+        tag = " ".join(f'{key}="{value.replace(chr(34), chr(39))}"' for key, value in attrs.items() if value)
+        parts.append(f"<source {tag}>\n{s.content}\n</source>")
     return "\n\n".join(parts)
